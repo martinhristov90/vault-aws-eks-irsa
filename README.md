@@ -87,7 +87,7 @@ again. Future Vault requests will automatically use this token.
 
 Key                      Value
 ---                      -----
-token                    hvs.CAESIO7u1UPzAGfqBh3-AXAt0l96xqdrYm06B-HXKBAIPF0VGh4KHGh2cy5ucXZoVnhBMG1XRzAzbFhyaEFqSWhiSzc
+token                    hvs.CAESIO7u1UPzAGfqBh3-A<SNIP>MG1XRzAzbFhyaEFqSWhiSzc
 token_accessor           nE1eOun6WoHk89iSeh1td7At
 token_duration           1m
 token_renewable          true
