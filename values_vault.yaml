@@ -143,15 +143,7 @@ server:
   # Commenting out or setting as empty the affinity variable, will allow
   # deployment to single node services such as Minikube
   # This should be either a multi-line string or YAML matching the PodSpec's affinity field.
-  affinity: |
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchLabels:
-              app.kubernetes.io/name: {{ template "vault.name" . }}
-              app.kubernetes.io/instance: "{{ .Release.Name }}"
-              component: server
-          topologyKey: kubernetes.io/hostname
+  affinity: {}
 
   # Enables a headless service to be used by the Vault Statefulset
   service:
