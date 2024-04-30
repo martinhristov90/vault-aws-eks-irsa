@@ -1,0 +1,12 @@
+.terraform
+license_vault*
+ca.pem*
+NOTES*
+LOGS*
+/private_keys/private*
+!/**/.gitkeep
+trash/
+crash.log
+.terraform
+.terraform.*
+default_values.yaml

@@ -1,0 +1,279 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+# Available parameters and their default values for the Vault chart.
+
+global:
+  # enabled is the master enabled switch. Setting this to true or false
+  # will enable or disable all the components within this chart by default.
+  enabled: true
+injector:
+  # True if you want to enable vault agent injection.
+  # @default: global.enabled
+  enabled: "false"
+
+server:
+  # If true, or "-" with global.enabled true, Vault server will be installed.
+  # See vault.mode in _helpers.tpl for implementation details.
+  enabled: "true"
+
+  # [Enterprise Only] This value refers to a Kubernetes secret that you have
+  # created that contains your enterprise license. If you are not using an
+  # enterprise image or if you plan to introduce the license key via another
+  # route, then leave secretName blank ("") or set it to null.
+  # Requires Vault Enterprise 1.8 or later.
+  enterpriseLicense:
+    # The name of the Kubernetes secret that holds the enterprise license. The
+    # secret must be in the same namespace that Vault is installed into.
+    secretName: "vault-ent-license"
+    # The key within the Kubernetes secret that holds the enterprise license.
+    secretKey: "license"
+
+  # Resource requests, limits, etc. for the server cluster placement. This
+  # should map directly to the value of the resources field for a PodSpec.
+  # By default no direct resource request is made.
+
+  image:
+    repository: "hashicorp/vault"
+    tag: "1.15.6"
+    # Overrides the default Image Pull Policy
+    pullPolicy: IfNotPresent
+
+  # Configure the Update Strategy Type for the StatefulSet
+  # See https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+  updateStrategyType: "OnDelete"
+
+  authDelegator:
+    enabled: true
+
+  # extraInitContainers is a list of init containers. Specified as a YAML list.
+  # This is useful if you need to run a script to provision TLS certificates or
+  # write out configuration files in a dynamic way.
+  extraInitContainers: 
+  - name: git-clone
+    image: alpine/git
+    args:
+      - clone
+      - --single-branch
+      - --
+      - ${git_repository}
+      - /vault/tf-provision
+    securityContext:
+      runAsUser: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+    volumeMounts:
+    - name: tf-provision
+      mountPath: /vault/tf-provision
+  - name: terraform-vault-provision-initialization
+    image: hashicorp/terraform:1.7.4
+    #command: ["/bin/sh"]
+    args:
+      - -chdir=/vault/tf-provision
+      - init
+      - -input=false
+    securityContext:
+      runAsUser: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+    volumeMounts:
+    - name: tf-provision
+      mountPath: /vault/tf-provision
+    - name: tmp
+      mountPath: /tmp
+  readinessProbe:
+    enabled: true
+    # If you need to use a http path instead of the default exec
+    # path: /v1/sys/health?standbyok=true
+
+    # Port number on which readinessProbe will be checked.
+    port: 8200
+    # When a probe fails, Kubernetes will try failureThreshold times before giving up
+    failureThreshold: 2
+    # Number of seconds after the container has started before probe initiates
+    initialDelaySeconds: 15
+    # How often (in seconds) to perform the probe
+    periodSeconds: 5
+    # Minimum consecutive successes for the probe to be considered successful after having failed
+    successThreshold: 1
+    # Number of seconds after which the probe times out.
+    timeoutSeconds: 3
+  # Used to enable a livenessProbe for the pods
+
+  # Used to define commands to run after the pod is ready.
+  # This can be used to automate processes such as initialization
+  # or boostrapping auth methods.
+  postStart: 
+    - /bin/sh
+    - -c
+    - /vault/userconfig/run.sh
+
+  # extraEnvironmentVars is a list of extra environment variables to set with the stateful set. These could be
+  # used to include variables required for auto-unseal.
+  extraEnvironmentVars:
+    #Defining variables used to provision Vault by TF
+    TF_VAR_DEMOROLE_POLICY_ARN: ${TF_VAR_DEMOROLE_POLICY_ARN}
+    TF_VAR_DEMOROLE_ROLE_ARN: ${TF_VAR_DEMOROLE_ROLE_ARN}
+    TF_VAR_ROLE_NAME: ${TF_VAR_ROLE_NAME}
+    TF_VAR_ALLOWED_ARN_ROLE_LOGIN: ${TF_VAR_ALLOWED_ARN_ROLE_LOGIN}
+    TF_VAR_INFERRED_AWS_REGION: ${TF_VAR_INFERRED_AWS_REGION}
+    TF_VAR_BOUND_VPC_IDS: ${TF_VAR_BOUND_VPC_IDS}
+ 
+  volumes:
+    - name: vault-init-config
+      configMap: 
+        name: vault-init-config
+        defaultMode: 0777
+    #Volume which contains TF configuration for configuring the Vault server, usually a GitHub repo
+    - name: tf-provision
+      emptyDir: {}
+    #Volume used as /tmp for Terraform container, so it can download providers
+    - name: tmp
+      emptyDir: {}
+  # volumeMounts is a list of volumeMounts for the main server container. These are rendered
+  # via toYaml rather than pre-processed like the extraVolumes value.
+  # The purpose is to make it easy to share volumes between containers.
+  volumeMounts: 
+    - mountPath: /vault/userconfig
+      name: vault-init-config
+    - name: tf-provision
+      mountPath: /vault/tf-provision
+        
+  # Affinity Settings
+  # Commenting out or setting as empty the affinity variable, will allow
+  # deployment to single node services such as Minikube
+  # This should be either a multi-line string or YAML matching the PodSpec's affinity field.
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ template "vault.name" . }}
+              app.kubernetes.io/instance: "{{ .Release.Name }}"
+              component: server
+          topologyKey: kubernetes.io/hostname
+
+  # Enables a headless service to be used by the Vault Statefulset
+  service:
+    enabled: true
+    # Enable or disable the vault-active service, which selects Vault pods that
+    # have labeled themselves as the cluster leader with `vault-active: "true"`.
+    active:
+      enabled: true
+      # Extra annotations for the service definition. This can either be YAML or a
+      # YAML-formatted multi-line templated string map of the annotations to apply
+      # to the active service.
+      annotations: {}
+    # Enable or disable the vault-standby service, which selects Vault pods that
+    # have labeled themselves as a cluster follower with `vault-active: "false"`.
+    standby:
+      enabled: true
+      # Extra annotations for the service definition. This can either be YAML or a
+      # YAML-formatted multi-line templated string map of the annotations to apply
+      # to the standby service.
+      annotations: {}
+    # If enabled, the service selectors will include `app.kubernetes.io/instance: {{ .Release.Name }}`
+    # When disabled, services may select Vault pods not deployed from the chart.
+    # Does not affect the headless vault-internal service with `ClusterIP: None`
+  dataStorage:
+    enabled: true
+    # Size of the PVC created
+    size: 1Gi
+    # Location where the PVC will be mounted.
+    mountPath: "/vault/data"
+    # Name of the storage class to use.  If null it will use the
+    # configured default Storage Class.
+    storageClass: null
+    # Access Mode of the storage device being used for the PVC
+    accessMode: ReadWriteOnce
+    # Annotations to apply to the PVC
+    annotations: {}
+    # Labels to apply to the PVC
+    labels: {}
+
+  # Persistent Volume Claim (PVC) retention policy
+  # ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#persistentvolumeclaim-retention
+  # Example:
+  # persistentVolumeClaimRetentionPolicy:
+  #   whenDeleted: Retain
+  #   whenScaled: Retain
+  persistentVolumeClaimRetentionPolicy: 
+    whenDeleted: Delete
+  # Removing the PVs when Vault Helm in uninstalled
+
+  ha:
+    enabled: true
+    replicas: 3
+
+    # Set the api_addr configuration for Vault HA
+    # See https://developer.hashicorp.com/vault/docs/configuration#api_addr
+    # If set to null, this will be set to the Pod IP Address
+    apiAddr: null
+
+    # Set the cluster_addr confuguration for Vault HA
+    # See https://developer.hashicorp.com/vault/docs/configuration#cluster_addr
+    # If set to null, this will be set to https://$(HOSTNAME).{{ template "vault.fullname" . }}-internal:8201
+    clusterAddr: null
+
+    # Enables Vault's integrated Raft storage.  Unlike the typical HA modes where
+    # Vault's persistence is external (such as Consul), enabling Raft mode will create
+    # persistent volumes for Vault to store data according to the configuration under server.dataStorage.
+    # The Vault cluster will coordinate leader elections and failovers internally.
+    raft:
+
+      # Enables Raft integrated storage
+      enabled: true
+      # Set the Node Raft ID to the name of the pod
+      setNodeId: false
+
+      # Note: Configuration files are stored in ConfigMaps so sensitive data
+      # such as passwords should be either mounted through extraSecretEnvironmentVars
+      # or through a Kube secret.  For more information see:
+      # https://developer.hashicorp.com/vault/docs/platform/k8s/helm/run#protecting-sensitive-vault-configurations
+      config: |
+        ui = true
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+          # Enable unauthenticated metrics access (necessary for Prometheus Operator)
+          #telemetry {
+          #  unauthenticated_metrics_access = "true"
+          #}
+        }
+
+        storage "raft" {
+          path = "/vault/data"
+      
+          retry_join {
+            auto_join = "provider=k8s namespace=\"{{ .Release.Namespace }}\" label_selector=\"component=server,app.kubernetes.io/name=vault\""
+              auto_join_scheme      = "http"
+          }
+        }
+        service_registration "kubernetes" {}
+
+        seal "awskms" {
+        kms_key_id = "${kms_key_id}"
+        }
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # The name of the service account to use.
+    # If not set and create is true, a name is generated using the fullname template
+    name: "${sa_name}"
+    # Create a Secret API object to store a non-expiring token for the service account.
+    # Prior to v1.24.0, Kubernetes used to generate this secret for each service account by default.
+    # Kubernetes now recommends using short-lived tokens from the TokenRequest API or projected volumes instead if possible.
+    # For more details, see https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets
+    # serviceAccount.create must be equal to 'true' in order to use this feature.
+    createSecret: false
+    # Extra annotations for the serviceAccount definition. This can either be
+    # YAML or a YAML-formatted multi-line templated string map of the
+    # annotations to apply to the serviceAccount.
+    annotations: 
+      eks.amazonaws.com/role-arn: "${vault_server_aws_role}" # Mapping this SA to AWS IAM ROLE
+
+    serviceDiscovery:
+      enabled: true
