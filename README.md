@@ -12,7 +12,8 @@
 ![Diagram](https://lucid.app/publicSegments/view/ebb116c7-90e4-4920-a344-ff3d584e8d1d/image.png)
 
 ### Prerequisites:
-  - Having AWS account with preinstalled AWS EKS cluster
+  - Having AWS account
+  - Pre-configured AWS EKS cluster with associated OIDC provider. Instructions on how to setup EKS cluster and OIDC provider for it can be found [here](https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html) and [here](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) 
   - Terraform v1.8.2 or higher
   - A Terraform Github repository which resembles [this](https://github.com/martinhristov90/vault-aws-eks-irsa), containing Vault TF provider resources to be deployed on the Vault server. The mentioned repository can be used as boilerplate.
 
