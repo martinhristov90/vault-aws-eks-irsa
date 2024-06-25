@@ -2,7 +2,7 @@
 resource "kubernetes_config_map" "vault_init_config" {
   metadata {
     name      = "vault-init-config"
-    namespace = var.sa_namespace
+    namespace = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
   }
 
   data = {
