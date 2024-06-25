@@ -2,7 +2,7 @@
 resource "kubernetes_role" "role_root_token_unseal_key" {
   metadata {
     name      = "update-k8s-secrets-vault-${random_pet.env.id}"
-    namespace = var.sa_namespace
+    namespace = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
     labels = {
       test = "vault-${random_pet.env.id}"
     }
@@ -19,7 +19,7 @@ resource "kubernetes_role" "role_root_token_unseal_key" {
 resource "kubernetes_role_binding" "role_root_token_unseal_key_role_binding" {
   metadata {
     name      = "vault-server-k8s-secrets-rolebinding"
-    namespace = var.sa_namespace
+    namespace = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
   }
   role_ref {
     api_group = "rbac.authorization.k8s.io"

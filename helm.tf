@@ -2,7 +2,7 @@ resource "helm_release" "vault_server" {
   name       = "vault-server-${random_pet.env.id}"
   repository = "https://helm.releases.hashicorp.com  "
   chart      = "hashicorp/vault"
-  namespace  = var.sa_namespace
+  namespace  = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
   version    = var.vault_helm_chart_version
   wait       = true #Waiting for all Vault Pods to be Ready state before marking TF success
   #The capital letter variables are used by TF init container
@@ -21,4 +21,5 @@ resource "helm_release" "vault_server" {
       git_repository                = var.git_repository
     })}"
   ]
+  depends_on = [kubernetes_secret.vault-ent-license]
 }
