@@ -18,6 +18,8 @@ if [[ $VAULT_K8S_POD_NAME =~ "^.+0$" ]]; then
         terraform -chdir=/vault/tf-provision apply -input=false -no-color --auto-approve > /proc/1/fd/1
     else
         echo "Vault is already initialized" > /proc/1/fd/1
+        echo "Vault is already initialized, grabbing the vault root token from K8S secret vault-root-creds and setting at home directory" > /proc/1/fd/1
+        wget --header="Authorization: Bearer "$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) --no-check-certificate --output-document - --quiet https://kubernetes.default:443/api/v1/namespaces/vault/secrets/vault-root-creds | grep root_token | tail -1 | awk -F"\"" '{print $4}' | base64 -d > ~/.vault-token
     fi
 else
     echo "This Pod is not supposed to initialize the storage, skipping init" > /proc/1/fd/1
