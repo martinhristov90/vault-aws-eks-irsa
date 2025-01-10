@@ -32,6 +32,11 @@ variable "vault_helm_chart_version" {
   description = "Version of the Vault helm chart to be used"
 }
 
+#variable "vault_version" {
+#  default     = "1.18.2-ent"
+#  description = "Version of Vault used by the Helm chart"
+#}
+
 variable "DEMOROLE_POLICY_ARN" {
   description = "ARN of DEMOROLE to be used by Vault AWS secret engine, used by TF init container"
 }
