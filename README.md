@@ -36,6 +36,8 @@
   |sa_namespace|vault|K8S namespace where the Vault server should be deployed, must be pre-existent|
   |consume_pod_namespace|default|K8S namespace where the consume Pod should be deployed, usually default|
   |vault_helm_chart_version|0.28.0|Version of the official Vault Helm chart to be used|
+  |vault_version|1.18.2|Version of Vault to be installed|
+  |vault_type|ent|Determines whether Vault server should be OSS or ENT|
   |DEMOROLE_POLICY_ARN|arn:aws:iam::ACCOUNT_ID_HERE:policy/DemoUser|ARN of Policy used the Vault's AWS secrets engine to create demo IAM users, that policy usually preexists with all Doormat accounts. Specifies the [policy_arns](https://developer.hashicorp.com/vault/api-docs/secret/aws#policy_arns) parameter for `iam_user` type role|
   |DEMOROLE_ROLE_ARN|arn:aws:iam::ACCOUNT_ID_HERE:role/vault-assumed-role-credentials-demo|Name of the AWS IAM role used to create STS credentials by the Vault's AWS secrets engine. Specifies the [role_arns](https://developer.hashicorp.com/vault/api-docs/secret/aws#role_arns) parameter for `assumed_role` type role |
   |INFERRED_AWS_REGION|us-east-2|Specifies [inferred_aws_region](https://developer.hashicorp.com/vault/api-docs/auth/aws#inferred_aws_region) parameter of AWS auth method (EC2 type)|
