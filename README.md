@@ -127,7 +127,7 @@ secret_key         56+jZZLtC<SNIP>i/f1N
 security_token     IQoJb3J<SNIP>+wFU3ApNoTxVf6QmvfT6i6PGhwrTCQvL6xBjqeAdHYe1V/Sb8g+zbrw+KpKzmJuC+oLTfcZ+gTnZMaFR2mLDSN87swkxRNSH/EoB/6dB/srj0poG0XFNVX3ijjbxROIQicKzDUXgFnP46nniKKsDJJ1aUofR3onANOxSMDHlAZDNkSa5XLyMV+P9ECfl21PHRSrZjUrR+HFwBARzcTih1wPEfxk5M+UqQ8/RQXFlCqvD94H5ZjHnQZGFaR
 ```
 ### How to consume this environment (Vault server side):
-- Vault root key and recovery keys are stored within the environment the `0` Pod of the Stateful set as well as K8S secret named `vault-root-creds` in the desired namespace. Can be sourced from either location.
+- Vault root key and recovery keys are stored within the `~/.vault-token` file the `0` Pod of the StatefulSet as well as K8S secret named `vault-root-creds` in the desired namespace. Can be sourced from either location.
 - Fetching root key and unseal keys from the K8S secret:
 ```
 base64 -d <<< $(kubectl get secret vault-root-creds -n vault -o json | jq -r .data.root_token)
