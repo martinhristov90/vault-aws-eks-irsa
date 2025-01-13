@@ -15,6 +15,8 @@ resource "helm_release" "vault_server" {
       TF_VAR_ALLOWED_ARN_ROLE_LOGIN = aws_iam_role.consume_pod_role.arn  # Allow consume pod to login
       TF_VAR_INFERRED_AWS_REGION    = var.INFERRED_AWS_REGION
       TF_VAR_BOUND_VPC_IDS          = var.BOUND_VPC_IDS
+      vault_version_and_type        = local.vault_version_and_type
+      vault_repository              = local.vault_repository
       sa_name                       = var.sa_name
       vault_server_aws_role         = aws_iam_role.vault_eks_server_role.arn
       kms_key_id                    = aws_kms_key.vault_server_kms_key.id # AWS KMS key used for seal/unseal

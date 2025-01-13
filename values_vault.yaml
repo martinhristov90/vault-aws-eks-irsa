@@ -34,8 +34,8 @@ server:
   # By default no direct resource request is made.
 
   image:
-    repository: "hashicorp/vault-enterprise"
-    tag: "1.18.2-ent"
+    repository: "${vault_repository}"
+    tag: "${vault_version_and_type}"
     # Overrides the default Image Pull Policy
     pullPolicy: IfNotPresent
 

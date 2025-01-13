@@ -9,14 +9,14 @@ resource "kubernetes_manifest" "servicemonitor_vault" {
         "app.kubernetes.io/managed-by" = "Helm"
         "app.kubernetes.io/name" = "vault"
         "helm.sh/chart" = "vault-0.28.1"
-        "release" = "marti-prom"
+        "release" = "prometheus"
       }
       "name" = "vault-vault-server-${random_pet.env.id}"
     }
     "spec" = {
       "endpoints" = [
         {
-          "interval" = "30s"
+          "interval" = "10s"
           "params" = {
             "format" = [
               "prometheus",
