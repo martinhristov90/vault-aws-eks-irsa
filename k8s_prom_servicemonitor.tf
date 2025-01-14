@@ -1,5 +1,5 @@
 resource "kubernetes_manifest" "servicemonitor_vault" {
-  count = enable_prometheus_servicemonitor ? 1 : 0
+  count = var.enable_prometheus_servicemonitor ? 1 : 0
   manifest = {
     "apiVersion" = "monitoring.coreos.com/v1"
     "kind"       = "ServiceMonitor"
