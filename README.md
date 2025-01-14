@@ -5,7 +5,7 @@
 
 
 ### What is it: 
-  This project utilizes already existing EKS AWS cluster to deploy the official Vault Helm chart, setup AWS IRSA accounts for Vault AWS auth method, Vault AWS secrets engine and auto Seal/Unseal functionality. 
+  This project utilizes already existing EKS AWS cluster to deploy the official Vault Helm chart, setting up AWS IRSA accounts for Vault AWS auth method, Vault AWS secrets engine and auto Seal/Unseal functionality. 
   In addition to above-mentioned setup, a consuming Pod named `consume-pod` is created, which can authenticate to the Vault server effortlessly simply via `vault login -method=aws` command.
 
 ### Simple diagram:
@@ -37,6 +37,7 @@
   |consume_pod_namespace|default|K8S namespace where the consume Pod should be deployed, usually default|
   |vault_helm_chart_version|0.28.0|Version of the official Vault Helm chart to be used|
   |vault_version|1.18.2|Version of Vault to be installed|
+  |enable_prometheus_servicemonitor|true|Enables deployment of ServiceMonitor resource when the Prometheus operator is installed in the K8S cluster|
   |vault_type|ent|Determines whether Vault server should be OSS or ENT|
   |DEMOROLE_POLICY_ARN|arn:aws:iam::ACCOUNT_ID_HERE:policy/DemoUser|ARN of Policy used the Vault's AWS secrets engine to create demo IAM users, that policy usually preexists with all Doormat accounts. Specifies the [policy_arns](https://developer.hashicorp.com/vault/api-docs/secret/aws#policy_arns) parameter for `iam_user` type role|
   |DEMOROLE_ROLE_ARN|arn:aws:iam::ACCOUNT_ID_HERE:role/vault-assumed-role-credentials-demo|Name of the AWS IAM role used to create STS credentials by the Vault's AWS secrets engine. Specifies the [role_arns](https://developer.hashicorp.com/vault/api-docs/secret/aws#role_arns) parameter for `assumed_role` type role |
@@ -46,17 +47,20 @@
 
 #### Example `terraform.tfvars` file:
   ```
-  k8s_cluster_name         = "k8s-training-martin"
-  aws_region               = "eu-central-1"
-  sa_name                  = "vault-server"
-  sa_namespace             = "vault"
-  consume_pod_namespace    = "default"
-  vault_helm_chart_version = "0.28.0"
-  DEMOROLE_POLICY_ARN      = "arn:aws:iam::1<SNIP>33:policy/DemoUser"
-  DEMOROLE_ROLE_ARN        = "arn:aws:iam::1<SNIP>33:role/vault-assumed-role-credentials-demo"
-  INFERRED_AWS_REGION      = "us-east-2"
-  BOUND_VPC_IDS            = "vpc-057<SNIP>1fba092a"
-  git_repository           = "https://github.com/martinhristov90/terraform-aws-k8s-vault-setup"
+  k8s_cluster_name                 = "k8s-training-martin"
+  aws_region                       = "eu-central-1"
+  sa_name                          = "vault-server"
+  sa_namespace                     = "vault"
+  consume_pod_namespace            = "default"
+  vault_helm_chart_version         = "0.28.0"
+  vault_version                    = "1.18.3"
+  vault_type                       = "ent"
+  enable_prometheus_servicemonitor = true
+  DEMOROLE_POLICY_ARN              = "arn:aws:iam::1<SNIP>33:policy/DemoUser"
+  DEMOROLE_ROLE_ARN                = "arn:aws:iam::1<SNIP>33:role/vault-assumed-role-credentials-demo"
+  INFERRED_AWS_REGION              = "us-east-2"
+  BOUND_VPC_IDS                    = "vpc-057<SNIP>1fba092a"
+  git_repository                   = "https://github.com/martinhristov90/terraform-aws-k8s-vault-setup"
   ```
 
 -----
@@ -71,7 +75,7 @@ vault-server-joint-racer-0   1/1     Running   0          3h
 vault-server-joint-racer-1   1/1     Running   0          3h
 vault-server-joint-racer-2   1/1     Running   0          3h
 ```
-- To verify the running `consume-pod` - `kubectl get pods consume-pod -n default`:
+- To verify that the `consume-pod` is running - `kubectl get pods consume-pod -n default`:
 ```
 kubectl get pods consume-pod -n default
 NAME          READY   STATUS    RESTARTS   AGE
@@ -81,7 +85,7 @@ consume-pod   1/1     Running   0          3h2m
 ```
 kubectl exec -it consume-pod -- /bin/sh
 ```
-- Login to Vault server without providing any additional parameters to the `vault login -method=aws` command (VAULT_ADDR is preset):
+- Login to Vault server via `vault login -method=aws` command without providing any additional parameters to the command (VAULT_ADDR is preset):
 ``` kubectl exec -it consume-pod -- /bin/sh
 / # vault login -method=aws
 Success! You are now authenticated. The token information displayed below
@@ -133,7 +137,7 @@ security_token     IQoJb3J<SNIP>+wFU3ApNoTxVf6QmvfT6i6PGhwrTCQvL6xBjqeAdHYe1V/Sb
 base64 -d <<< $(kubectl get secret vault-root-creds -n vault -o json | jq -r .data.root_token)
 base64 -d <<< $(kubectl get secret vault-root-creds -n vault -o json | jq -r .data.recovery_key)
 ```
-- As already mentioned upon establishing a session to Pod `0`, Vault is already unsealed and `root` token is set to the environment and ready to be used:
+- As already mentioned upon establishing a session to Pod `0`, Vault is already unsealed and `root` token is set in the `~/.vault-token` file in the home directory, ready to be used:
     - Expected `vault status -format=json` output:
         ```json
         {
@@ -192,6 +196,7 @@ base64 -d <<< $(kubectl get secret vault-root-creds -n vault -o json | jq -r .da
 - Further configurations can be made to the Vault server utilizing the `root` token or subsequently issued child tokens.
 -----
 ### TODO:
-  - [ ] Configure optional Ingress resource + cert 
+  - [ ] Configure optional Ingress resource + cert
+  - [x] Add ServiceMonitor resource for Prometheus operator
 ### License:
   - [MIT](https://choosealicense.com/licenses/mit/)

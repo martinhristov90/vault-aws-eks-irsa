@@ -1,15 +1,15 @@
-#Creating a service with predictable names (the name of services depends of the name of the Helm release) to be used for Vault benchmark tool
+#Creating a service with predictable name (the name of services depends of the name of the Helm release) to be used for Vault benchmark tool
 
 resource "kubernetes_service" "example" {
   metadata {
-    name = "vault-benchmark-service"
+    name      = "vault-benchmark-service"
     namespace = "vault"
   }
   spec {
     selector = {
       "app.kubernetes.io/instance" = "vault-server-${random_pet.env.id}",
-      "app.kubernetes.io/name" = "vault",
-      "component"="server"
+      "app.kubernetes.io/name"     = "vault",
+      "component"                  = "server"
     }
     session_affinity = "ClientIP"
     port {
