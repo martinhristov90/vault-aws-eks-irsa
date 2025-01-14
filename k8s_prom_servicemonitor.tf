@@ -1,15 +1,16 @@
 resource "kubernetes_manifest" "servicemonitor_vault" {
+  count = enable_prometheus_servicemonitor ? 1 : 0
   manifest = {
     "apiVersion" = "monitoring.coreos.com/v1"
-    "kind" = "ServiceMonitor"
+    "kind"       = "ServiceMonitor"
     "metadata" = {
       "namespace" = "default"
       "labels" = {
-        "app.kubernetes.io/instance" = "vault-prom-crd"
+        "app.kubernetes.io/instance"   = "vault-prom-crd"
         "app.kubernetes.io/managed-by" = "Helm"
-        "app.kubernetes.io/name" = "vault"
-        "helm.sh/chart" = "vault-0.28.1"
-        "release" = "prometheus"
+        "app.kubernetes.io/name"       = "vault"
+        "helm.sh/chart"                = "vault-0.28.1"
+        "release"                      = "prometheus"
       }
       "name" = "vault-vault-server-${random_pet.env.id}"
     }
@@ -22,9 +23,9 @@ resource "kubernetes_manifest" "servicemonitor_vault" {
               "prometheus",
             ]
           }
-          "path" = "/v1/sys/metrics"
-          "port" = "http"
-          "scheme" = "http"
+          "path"          = "/v1/sys/metrics"
+          "port"          = "http"
+          "scheme"        = "http"
           "scrapeTimeout" = "10s"
           "tlsConfig" = {
             "insecureSkipVerify" = true
@@ -39,8 +40,8 @@ resource "kubernetes_manifest" "servicemonitor_vault" {
       "selector" = {
         "matchLabels" = {
           "app.kubernetes.io/instance" = "vault-server-${random_pet.env.id}"
-          "app.kubernetes.io/name" = "vault"
-          "vault-active" = "true"
+          "app.kubernetes.io/name"     = "vault"
+          "vault-active"               = "true"
         }
       }
     }

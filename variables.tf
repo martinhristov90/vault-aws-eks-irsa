@@ -52,6 +52,11 @@ variable "vault_type" {
   }
 }
 
+variable "enable_prometheus_servicemonitor" {
+  type    = bool
+  default = true
+}
+
 variable "DEMOROLE_POLICY_ARN" {
   description = "ARN of DEMOROLE to be used by Vault AWS secret engine, used by TF init container"
 }
