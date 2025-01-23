@@ -56,6 +56,21 @@ variable "enable_prometheus_servicemonitor" {
   type    = bool
   default = true
 }
+# Variables for Ingress resource and ACM certificate
+variable "ingress_enable" {
+  type    = bool
+  default = true
+}
+
+variable "ingress_hosted_zone" {
+  type    = string
+  default = "mhristov.sbx.hashidemos.io"
+}
+
+variable "ingress_lb_name" {
+  type    = string
+  default = "marti-test-alb-vault-k8s"
+}
 
 variable "DEMOROLE_POLICY_ARN" {
   description = "ARN of DEMOROLE to be used by Vault AWS secret engine, used by TF init container"

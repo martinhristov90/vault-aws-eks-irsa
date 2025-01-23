@@ -38,6 +38,9 @@
   |vault_helm_chart_version|0.28.0|Version of the official Vault Helm chart to be used|
   |vault_version|1.18.2|Version of Vault to be installed|
   |enable_prometheus_servicemonitor|true|Enables deployment of ServiceMonitor resource when the Prometheus operator is installed in the K8S cluster|
+  |ingress_enable|false|Enables deployment Ingress resource via Vault's Helm chart, this usually results in creation of ALB in AWS|
+  |ingress_hosted_zone|mhristov.sbx.hashidemos.io|Hosted zone for issuing publicly trusted TLS certificate used by the Ingress resource|
+  |ingress_lb_name|marti-test-alb-vault-k8s|Name of the ALB created in AWS|
   |vault_type|ent|Determines whether Vault server should be OSS or ENT|
   |DEMOROLE_POLICY_ARN|arn:aws:iam::ACCOUNT_ID_HERE:policy/DemoUser|ARN of Policy used the Vault's AWS secrets engine to create demo IAM users, that policy usually preexists with all Doormat accounts. Specifies the [policy_arns](https://developer.hashicorp.com/vault/api-docs/secret/aws#policy_arns) parameter for `iam_user` type role|
   |DEMOROLE_ROLE_ARN|arn:aws:iam::ACCOUNT_ID_HERE:role/vault-assumed-role-credentials-demo|Name of the AWS IAM role used to create STS credentials by the Vault's AWS secrets engine. Specifies the [role_arns](https://developer.hashicorp.com/vault/api-docs/secret/aws#role_arns) parameter for `assumed_role` type role |

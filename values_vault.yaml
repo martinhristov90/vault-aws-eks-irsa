@@ -13,6 +13,55 @@ injector:
   enabled: "false"
 
 server:
+# Ingress resource is deployed in case enable_https_ingress variable is set to true
+  ingress:
+    enabled: ${ingress_enable}
+    labels: {}
+      # traffic: external
+    annotations:
+      alb.ingress.kubernetes.io/target-type: "ip"
+      alb.ingress.kubernetes.io/load-balancer-name: "${ingress_lb_name}"
+      alb.ingress.kubernetes.io/tags: "k8s_cluster=${k8s_cluster_name}"
+      alb.ingress.kubernetes.io/scheme: "internet-facing"
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+      alb.ingress.kubernetes.io/healthcheck-protocol: "HTTP"
+      alb.ingress.kubernetes.io/healthcheck-port: "8200"
+      alb.ingress.kubernetes.io/success-codes: 200,429,473
+      alb.ingress.kubernetes.io/healthcheck-path: "/v1/sys/health"
+      # |
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+      #   or
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+
+    # Optionally use ingressClassName instead of deprecated annotation.
+    # See: https://kubernetes.io/docs/concepts/services-networking/ingress/#deprecated-annotation
+    ingressClassName: "alb"
+
+    # As of Kubernetes 1.19, all Ingress Paths must have a pathType configured. The default value below should be sufficient in most cases.
+    # See: https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types for other possible values.
+    pathType: Prefix
+
+    # When HA mode is enabled and K8s service registration is being used,
+    # configure the ingress to point to the Vault active service.
+    activeService: false
+    hosts:
+      - host: vault.${ingress_hosted_zone}
+        paths: []
+    ## Extra paths to prepend to the host configuration. This is useful when working with annotation based services.
+    extraPaths: []
+    # - path: /*
+    #   backend:
+    #     service:
+    #       name: ssl-redirect
+    #       port:
+    #         number: use-annotation
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
   # If true, or "-" with global.enabled true, Vault server will be installed.
   # See vault.mode in _helpers.tpl for implementation details.
   enabled: "true"

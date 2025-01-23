@@ -17,11 +17,15 @@ resource "helm_release" "vault_server" {
       TF_VAR_BOUND_VPC_IDS          = var.BOUND_VPC_IDS
       vault_version_and_type        = local.vault_version_and_type
       vault_repository              = local.vault_repository
+      ingress_enable                = var.ingress_enable
+      ingress_lb_name               = var.ingress_lb_name
+      ingress_hosted_zone           = var.ingress_hosted_zone
+      k8s_cluster_name              = var.k8s_cluster_name
       sa_name                       = var.sa_name
       vault_server_aws_role         = aws_iam_role.vault_eks_server_role.arn
       kms_key_id                    = aws_kms_key.vault_server_kms_key.id # AWS KMS key used for seal/unseal
       git_repository                = var.git_repository
     })}"
   ]
-  depends_on = [kubernetes_secret.vault-ent-license]
+  depends_on = [kubernetes_secret.vault-ent-license, module.acm_ingress]
 }
