@@ -13,7 +13,8 @@ injector:
   enabled: "false"
 
 server:
-# Ingress resource is deployed in case enable_https_ingress variable is set to true
+  
+  # Ingress resource is deployed in case enable_https_ingress variable is set to true
   ingress:
     enabled: ${ingress_enable}
     labels: {}
@@ -323,3 +324,52 @@ server:
 
     serviceDiscovery:
       enabled: true
+# Configuring ServiceMonitor resource to be used with the Prometheus operator
+# Keep in mind that Prometheus resource should be in the same namespace as Vault
+# Otherwise specify serviceMonitorNamespaceSelector: {} in the Prometheus object
+serverTelemetry:
+  # Configuration for monitoring the Vault server.
+  serviceMonitor:
+    # The Prometheus operator *must* be installed before enabling this feature,
+    # if not the chart will fail to install due to missing CustomResourceDefinitions
+    # provided by the operator.
+    #
+    # Instructions on how to install the Helm chart can be found here:
+    #  https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack
+    # More information can be found here:
+    #  https://github.com/prometheus-operator/prometheus-operator
+    #  https://github.com/prometheus-operator/kube-prometheus
+
+    # Enable deployment of the Vault Server ServiceMonitor CustomResource.
+    enabled: {enable_prometheus_servicemonitor}
+
+    # Selector labels to add to the ServiceMonitor.
+    # When empty, defaults to:
+    #  release: prometheus
+    selectors: 
+      release: prometheus
+
+    # Interval at which Prometheus scrapes metrics
+    interval: 30s
+
+    # Timeout for Prometheus scrapes
+    scrapeTimeout: 10s
+
+    # tlsConfig used for scraping the Vault metrics API.
+    # See API reference: https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.TLSConfig
+    # example:
+    # tlsConfig:
+    #   ca:
+    #     secret:
+    #       name: vault-metrics-client
+    #       key: ca.crt
+    tlsConfig: {}
+
+    # authorization used for scraping the Vault metrics API.
+    # See API reference: https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.SafeAuthorization
+    # example:
+    # authorization:
+    #   credentials:
+    #     name: vault-metrics-client
+    #     key: token
+    authorization: {}
