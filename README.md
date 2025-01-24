@@ -59,6 +59,9 @@
   vault_version                    = "1.18.3"
   vault_type                       = "ent"
   enable_prometheus_servicemonitor = true
+  ingress_enable                   = false
+  ingress_hosted_zone              = "mhristov.sbx.hashidemos.io"
+  ingress_lb_name                  = "marti-test-alb-vault-k8s"
   DEMOROLE_POLICY_ARN              = "arn:aws:iam::1<SNIP>33:policy/DemoUser"
   DEMOROLE_ROLE_ARN                = "arn:aws:iam::1<SNIP>33:role/vault-assumed-role-credentials-demo"
   INFERRED_AWS_REGION              = "us-east-2"
@@ -199,7 +202,8 @@ base64 -d <<< $(kubectl get secret vault-root-creds -n vault -o json | jq -r .da
 - Further configurations can be made to the Vault server utilizing the `root` token or subsequently issued child tokens.
 -----
 ### TODO:
-  - [ ] Configure optional Ingress resource + cert
+  - [x] Configure optional Ingress resource + cert
   - [x] Add ServiceMonitor resource for Prometheus operator
+  - [x] Deploy ServiceMonitor via Vault's Helm chart
 ### License:
   - [MIT](https://choosealicense.com/licenses/mit/)
