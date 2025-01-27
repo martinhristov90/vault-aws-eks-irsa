@@ -29,7 +29,7 @@
 ### `terraform.tfvars` explanation and example:
 
   | Variable | Example | Meaning |
-  | :--- | :---- | :--- |
+  | --- | - | --- |
   |k8s_cluster_name| k8s-training-martin|Name of EKS AWS kubernetes cluster, already deployed in AWS|
   |aws_region|eu-central-1|AWS region where the EKS cluster is deployed|
   |sa_name|vault-server|Name of K8S SA used by the Vault server Pods|

@@ -336,7 +336,7 @@ serverTelemetry:
     #  https://github.com/prometheus-operator/kube-prometheus
 
     # Enable deployment of the Vault Server ServiceMonitor CustomResource.
-    enabled: {enable_prometheus_servicemonitor}
+    enabled: ${enable_prometheus_servicemonitor}
 
     # Selector labels to add to the ServiceMonitor.
     # When empty, defaults to:
