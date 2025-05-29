@@ -289,7 +289,7 @@ server:
           path = "/vault/data"
       
           retry_join {
-            auto_join = "provider=k8s namespace=\"{{ .Release.Namespace }}\" label_selector=\"component=server,app.kubernetes.io/name=vault\""
+            auto_join = "provider=k8s namespace=\"{{ .Release.Namespace }}\" label_selector=\"component=server, app.kubernetes.io/name=vault\""
               auto_join_scheme      = "http"
           }
         }
