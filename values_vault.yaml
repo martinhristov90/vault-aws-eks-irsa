@@ -269,7 +269,7 @@ server:
       # https://developer.hashicorp.com/vault/docs/platform/k8s/helm/run#protecting-sensitive-vault-configurations
       config: |
         ui = true
-
+        raw_storage_endpoint = true
         listener "tcp" {
           tls_disable = 1
           address = "[::]:8200"
