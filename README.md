@@ -5,7 +5,7 @@
 
 
 ### What is it: 
-  This project utilizes already existing EKS AWS cluster to deploy the official Vault Helm chart, setting up AWS IRSA accounts for Vault AWS auth method, Vault AWS secrets engine and auto Seal/Unseal functionality. 
+  This project utilizes already existing EKS AWS cluster to deploy the official Vault Helm chart, setting up AWS IRSA accounts (IAM roles for service accounts (IRSA)) for Vault AWS auth method, Vault AWS secrets engine and auto Seal/Unseal functionality. 
   In addition to above-mentioned setup, a consuming Pod named `consume-pod` is created, which can authenticate to the Vault server effortlessly simply via `vault login -method=aws` command.
 
 ### Simple diagram:
