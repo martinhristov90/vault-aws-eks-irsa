@@ -24,6 +24,7 @@ server:
       alb.ingress.kubernetes.io/healthcheck-port: "8200"
       alb.ingress.kubernetes.io/success-codes: 200,429,473
       alb.ingress.kubernetes.io/healthcheck-path: "/v1/sys/health"
+      external-dns.alpha.kubernetes.io/hostname: vault.${ingress_hosted_zone}
       # |
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
