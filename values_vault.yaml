@@ -369,6 +369,10 @@ serverTelemetry:
     #     name: vault-metrics-client
     #     key: token
     authorization: {}
+    # Selecting all Vault instances, NOT just the active one
+    matchLabels: {
+      vault-internal: "true"
+    }
   prometheusRules:
       # The Prometheus operator *must* be installed before enabling this feature,
       # if not the chart will fail to install due to missing CustomResourceDefinitions
