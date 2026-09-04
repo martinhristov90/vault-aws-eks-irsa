@@ -12,7 +12,7 @@ resource "kubernetes_role" "role_root_token_unseal_key" {
     api_groups     = [""]
     resources      = ["secrets"]
     resource_names = ["vault-root-creds"]
-    verbs          = ["create", "get", "patch"]
+    verbs          = ["get", "patch"]
   }
 }
 #Rolebinding for the role above
