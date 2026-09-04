@@ -16,10 +16,10 @@ case "$VAULT_K8S_POD_NAME" in
         echo "the VAULT_K8S_POD_NAME ends with 0, this is the first Pod of the StatefulSet, initalizing the storage" > /proc/1/fd/1 
         vault operator init -recovery-shares=1 -recovery-threshold=1 > /tmp/root.keys
         cd /tmp
-        wget https://releases.hashicorp.com/terraform/1.7.4/terraform_1.7.4_linux_amd64.zip
-        unzip terraform_1.7.4_linux_amd64.zip
+        wget https://releases.hashicorp.com/terraform/1.7.4/terraform_1.7.4_linux_amd64.zip || { echo "ERROR: failed to download Terraform" > /proc/1/fd/1; exit 1; }
+        unzip terraform_1.7.4_linux_amd64.zip || { echo "ERROR: failed to unzip Terraform" > /proc/1/fd/1; exit 1; }
         rm terraform_1.7.4_linux_amd64.zip
-        mv /tmp/terraform /home/vault
+        mv /tmp/terraform /home/vault || { echo "ERROR: failed to move Terraform binary" > /proc/1/fd/1; exit 1; }
         PATH=$PATH:/home/vault
         cat /tmp/root.keys | grep "Initial Root Token" | cut -d " " -f4 - > ~/.vault-token
         cat /tmp/root.keys | grep "Recovery Key 1" | cut -d " " -f4 > ~/.vault-recovery-key
