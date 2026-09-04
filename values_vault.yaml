@@ -134,8 +134,9 @@ server:
 
     # Port number on which readinessProbe will be checked.
     port: 8200
-    # When a probe fails, Kubernetes will try failureThreshold times before giving up
-    failureThreshold: 2
+    # Allow enough time for Raft quorum to form, KMS unseal to complete,
+    # and postStart init/apply to finish before giving up (30 * 5s = 150s window)
+    failureThreshold: 30
     # Number of seconds after the container has started before probe initiates
     initialDelaySeconds: 15
     # How often (in seconds) to perform the probe
@@ -167,9 +168,9 @@ server:
  
   volumes:
     - name: vault-init-config
-      configMap: 
+      configMap:
         name: vault-init-config
-        defaultMode: 0777
+        defaultMode: 0550 # owner+group execute only; world-writable (0777) is a security risk for an executable script in a multi-tenant cluster
     #Volume which contains TF configuration for configuring the Vault server, usually a GitHub repo
     - name: tf-provision
       emptyDir: {}

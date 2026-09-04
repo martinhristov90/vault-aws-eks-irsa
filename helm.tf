@@ -1,7 +1,7 @@
 resource "helm_release" "vault_server" {
   name       = "vault-server-${random_pet.env.id}"
-  repository = "https://helm.releases.hashicorp.com  "
-  chart      = "hashicorp/vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
   namespace  = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
   version    = var.vault_helm_chart_version
   wait       = true #Waiting for all Vault Pods to be Ready state before marking TF success

@@ -1,9 +1,9 @@
 #Creating a service with predictable name (the name of services depends of the name of the Helm release) to be used for Vault benchmark tool
 
-resource "kubernetes_service" "example" {
+resource "kubernetes_service" "vault_benchmark" {
   metadata {
     name      = "vault-benchmark-service"
-    namespace = "vault"
+    namespace = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
   }
   spec {
     selector = {
