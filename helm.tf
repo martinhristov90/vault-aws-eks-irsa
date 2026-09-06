@@ -20,6 +20,7 @@ resource "helm_release" "vault_server" {
       ingress_enable                   = var.ingress_enable
       ingress_lb_name                  = var.ingress_lb_name
       ingress_hosted_zone              = var.ingress_hosted_zone
+      certificate_arn                  = var.ingress_enable ? module.acm_ingress[0].certificate_arn : ""
       enable_prometheus_servicemonitor = var.enable_prometheus_servicemonitor
       k8s_cluster_name                 = var.k8s_cluster_name
       sa_name                          = var.sa_name

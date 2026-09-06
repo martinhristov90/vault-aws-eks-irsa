@@ -4,6 +4,7 @@ variable "k8s_cluster_name" {
 }
 
 variable "aws_region" {
+  type        = string
   description = "AWS region where the EKS cluster is located"
 }
 
