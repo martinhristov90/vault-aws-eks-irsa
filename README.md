@@ -4,7 +4,7 @@
 ![Vault Logo](https://github.com/hashicorp/vault/raw/f22d202cde2018f9455dec755118a9b84586e082/Vault_PrimaryLogo_Black.png)
 
 
-### What is it: 
+### What is it:
   This project utilizes already existing EKS AWS cluster to deploy the official Vault Helm chart, setting up AWS IRSA accounts (IAM roles for service accounts (IRSA)) for Vault AWS auth method, Vault AWS secrets engine and auto Seal/Unseal functionality. 
   In addition to above-mentioned setup, a consuming Pod named `consume-pod` is created, which can authenticate to the Vault server effortlessly simply via `vault login -method=aws` command.
 
@@ -14,7 +14,7 @@
 ### Prerequisites:
   - Having AWS account
   - Pre-configured AWS EKS cluster with associated OIDC provider. Instructions on how to setup EKS cluster and OIDC provider for it can be found [here](https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html) and [here](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) 
-  - Terraform v1.8.2 or higher
+  - Terraform >= 1.8.2, < 1.9.0 (constraint: `~> 1.8.2`)
   - A Terraform Github repository which resembles [this](https://github.com/martinhristov90/terraform-aws-k8s-vault-setup), containing Vault TF provider resources to be deployed on the Vault server. The mentioned repository can be used as boilerplate.
 
 ### Usage:
@@ -24,7 +24,10 @@
   - Make sure that you are already authenticated to the K8S cluster and you have the desired K8S context set as "current", you can do this with `kubectl config current-context` and `kubectl get pods`(example) commands.
   - Initialize Terraform providers: `terraform init`.
   - Execute Terraform plan and apply: `terraform plan` and `terraform apply`.
-  - Terraform logs will be printed at `stdout` of `0`th Pod of Vault's StatefulSet.
+  - Terraform logs will be printed at `stdout` of `0`th Pod of Vault's StatefulSet. To follow initialization progress:
+    ```
+    kubectl logs -f -n <sa_namespace> -c vault <release-name>-0
+    ```
   - For establishing sessions with the Vault server and `consume-pod`, `kubectl exec...` command can be utilized or 3rd party tools, such as [k9s](https://github.com/derailed/k9s).
 ### `terraform.tfvars` explanation and example:
 
@@ -33,10 +36,10 @@
   |k8s_cluster_name| k8s-training-martin|Name of EKS AWS kubernetes cluster, already deployed in AWS|
   |aws_region|eu-central-1|AWS region where the EKS cluster is deployed|
   |sa_name|vault-server|Name of K8S SA used by the Vault server Pods|
-  |sa_namespace|vault|K8S namespace where the Vault server should be deployed, must be pre-existent|
+  |sa_namespace|vault|K8S namespace where the Vault server will be deployed — created by this Terraform configuration via `k8s_namespace.tf`|
   |consume_pod_namespace|default|K8S namespace where the consume Pod should be deployed, usually default|
-  |vault_helm_chart_version|0.28.0|Version of the official Vault Helm chart to be used|
-  |vault_version|1.18.2|Version of Vault to be installed|
+  |vault_helm_chart_version|0.34.1|Version of the official Vault Helm chart to be used|
+  |vault_version|2.0.4|Version of Vault to be installed|
   |enable_prometheus_servicemonitor|true|Enables deployment of ServiceMonitor resource when the Prometheus operator is installed in the K8S cluster|
   |ingress_enable|false|Enables deployment Ingress resource via Vault's Helm chart, this usually results in creation of ALB in AWS|
   |ingress_hosted_zone|mhristov.sbx.hashidemos.io|Hosted zone for issuing publicly trusted TLS certificate used by the Ingress resource|
@@ -55,8 +58,8 @@
   sa_name                          = "vault-server"
   sa_namespace                     = "vault"
   consume_pod_namespace            = "default"
-  vault_helm_chart_version         = "0.28.0"
-  vault_version                    = "1.18.3"
+  vault_helm_chart_version         = "0.34.1"
+  vault_version                    = "2.0.4"
   vault_type                       = "ent"
   enable_prometheus_servicemonitor = true
   ingress_enable                   = false
@@ -92,7 +95,8 @@ consume-pod   1/1     Running   0          3h2m
 kubectl exec -it consume-pod -- /bin/sh
 ```
 - Login to Vault server via `vault login -method=aws` command without providing any additional parameters to the command (VAULT_ADDR is preset):
-``` kubectl exec -it consume-pod -- /bin/sh
+```
+kubectl exec -it consume-pod -- /bin/sh
 / # vault login -method=aws
 Success! You are now authenticated. The token information displayed below
 is already stored in the token helper. You do NOT need to run "vault login"
@@ -137,7 +141,7 @@ secret_key         56+jZZLtC<SNIP>i/f1N
 security_token     IQoJb3J<SNIP>+wFU3ApNoTxVf6QmvfT6i6PGhwrTCQvL6xBjqeAdHYe1V/Sb8g+zbrw+KpKzmJuC+oLTfcZ+gTnZMaFR2mLDSN87swkxRNSH/EoB/6dB/srj0poG0XFNVX3ijjbxROIQicKzDUXgFnP46nniKKsDJJ1aUofR3onANOxSMDHlAZDNkSa5XLyMV+P9ECfl21PHRSrZjUrR+HFwBARzcTih1wPEfxk5M+UqQ8/RQXFlCqvD94H5ZjHnQZGFaR
 ```
 ### How to consume this environment (Vault server side):
-- Vault root key and recovery keys are stored within the `~/.vault-token` file the `0` Pod of the StatefulSet as well as K8S secret named `vault-root-creds` in the desired namespace. Can be sourced from either location.
+- The root token is cached in `~/.vault-token` on Pod `0` of the StatefulSet. Both the root token and the recovery key are persisted in the `vault-root-creds` Kubernetes secret in the target namespace and can be sourced from there.
 - Fetching root key and unseal keys from the K8S secret:
 ```
 base64 -d <<< $(kubectl get secret vault-root-creds -n vault -o json | jq -r .data.root_token)
@@ -199,6 +203,7 @@ base64 -d <<< $(kubectl get secret vault-root-creds -n vault -o json | jq -r .da
           },
           "warnings": null
         }
+        ```
 - Further configurations can be made to the Vault server utilizing the `root` token or subsequently issued child tokens.
 -----
 ### TODO:
