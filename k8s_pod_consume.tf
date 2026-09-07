@@ -48,7 +48,7 @@ resource "kubernetes_pod" "consume_pod" {
   spec {
     service_account_name = var.consume_pod_sa_name # The SA has the same name as the AWS role, which would allow omitting of `role=` when login - vault login -method=aws
     container {
-      image   = "hashicorp/vault:1.15.6"
+      image   = "${local.vault_repository}:${local.vault_version_and_type}" # kept in sync with the Helm chart image via locals
       name    = "vault-client"
       command = ["/bin/sh"]
       args    = ["-c", "while true; do echo consume pod; sleep 10;done"]

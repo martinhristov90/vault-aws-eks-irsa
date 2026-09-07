@@ -25,6 +25,7 @@ server:
       alb.ingress.kubernetes.io/success-codes: 200,429,473
       alb.ingress.kubernetes.io/healthcheck-path: "/v1/sys/health"
       external-dns.alpha.kubernetes.io/hostname: vault.${ingress_hosted_zone}
+      alb.ingress.kubernetes.io/certificate-arn: "${certificate_arn}"
       # |
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
@@ -111,6 +112,7 @@ server:
     volumeMounts:
     - name: tf-provision
       mountPath: /vault/tf-provision
+    # This just does an init of TF, so the TF inside the main container can configure Vault
   - name: terraform-vault-provision-initialization
     image: hashicorp/terraform:1.7.4
     #command: ["/bin/sh"]
@@ -134,8 +136,9 @@ server:
 
     # Port number on which readinessProbe will be checked.
     port: 8200
-    # When a probe fails, Kubernetes will try failureThreshold times before giving up
-    failureThreshold: 2
+    # Allow enough time for Raft quorum to form, KMS unseal to complete,
+    # and postStart init/apply to finish before giving up (30 * 5s = 150s window)
+    failureThreshold: 30
     # Number of seconds after the container has started before probe initiates
     initialDelaySeconds: 15
     # How often (in seconds) to perform the probe
@@ -167,9 +170,9 @@ server:
  
   volumes:
     - name: vault-init-config
-      configMap: 
+      configMap:
         name: vault-init-config
-        defaultMode: 0777
+        defaultMode: 0550 # owner+group execute only; world-writable (0777) is a security risk for an executable script in a multi-tenant cluster
     #Volume which contains TF configuration for configuring the Vault server, usually a GitHub repo
     - name: tf-provision
       emptyDir: {}
@@ -388,40 +391,58 @@ serverTelemetry:
       selectors: 
         release: prometheus
 
-
       # Some example rules.
       rules:
         - alert: vault-HighResponseTime
+          # Fires when the p50 (median) request latency on the active node exceeds 500ms for 5 minutes.
+          # Filtered to vault_active="true" so standbys (which forward requests and have higher
+          # inherent latency) do not generate noise. Indicates the active node is under load or degraded.
           annotations:
-            message: The response time of Vault is over 500ms on average over the last 5 minutes.
-          expr: vault_core_handle_request{quantile="0.5", namespace="mynamespace"} > 500
+            summary: Vault high response time (instance {{ $labels.instance }})
+            description: "Response time p50 > 500ms on {{ $labels.instance }}\n  VALUE = {{ $value | printf \"%.2f\" }}ms"
+          expr: vault_core_handle_request{quantile="0.5", vault_active="true"} > 500
           for: 5m
           labels:
             severity: warning
-        - alert: vault-HighResponseTime
+        - alert: vault-CriticalResponseTime
+          # Fires when the p50 request latency on the active node exceeds 1s for 5 minutes.
+          # At this threshold clients are likely experiencing timeouts. Investigate storage I/O,
+          # KMS latency, or CPU saturation on the active pod.
           annotations:
-            message: The response time of Vault is over 1s on average over the last 5 minutes.
-          expr: vault_core_handle_request{quantile="0.5", namespace="mynamespace"} > 1000
+            summary: Vault critical response time (instance {{ $labels.instance }})
+            description: "Response time p50 > 1s on {{ $labels.instance }}\n  VALUE = {{ $value | printf \"%.2f\" }}ms"
+          expr: vault_core_handle_request{quantile="0.5", vault_active="true"} > 1000
           for: 5m
           labels:
             severity: critical
         - alert: VaultSealed
+          # Fires when a Vault pod reports sealed state for more than 2 minutes.
+          # for: 2m provides a buffer for KMS auto-unseal to complete on pod startup —
+          # pods briefly pass through sealed state before AWS KMS responds.
+          # If this fires and persists, check KMS connectivity and vault operator unseal status.
           expr: vault_core_unsealed == 0
-          for: 0m
+          for: 2m
           labels:
             severity: critical
           annotations:
             summary: Vault sealed (instance {{ $labels.instance }})
             description: "Vault instance is sealed on {{ $labels.instance }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
         - alert: VaultTooManyPendingTokens
-          expr: avg(vault_token_create_count - vault_token_store_count) > 0
+          # Fires when more than 100 tokens are created but not yet stored within a 5 minute window.
+          # Uses increase() on counters rather than raw subtraction to avoid always-positive false positives.
+          # A sustained backlog indicates the token store (Raft storage) is falling behind creation rate.
+          expr: increase(vault_token_create_count[5m]) - increase(vault_token_store_count[5m]) > 100
           for: 5m
           labels:
             severity: warning
           annotations:
             summary: Vault too many pending tokens (instance {{ $labels.instance }})
-            description: "Too many pending tokens {{ $labels.instance }}: {{ $value | printf \"%.2f\"}}%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+            description: "Too many pending tokens {{ $labels.instance }}: {{ $value | printf \"%.2f\"}}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
         - alert: VaultTooManyInfinityTokens
+          # Fires when more than 3 non-expiring tokens (TTL=+Inf) exist.
+          # Infinity tokens never expire and accumulate indefinitely — they are a security risk
+          # as a compromised token cannot be expired by TTL. Investigate which auth methods
+          # or manual token creates are generating them.
           expr: vault_token_count_by_ttl{creation_ttl="+Inf"} > 3
           for: 5m
           labels:
@@ -429,11 +450,51 @@ serverTelemetry:
           annotations:
             summary: Vault too many infinity tokens (instance {{ $labels.instance }})
             description: "Too many infinity tokens {{ $labels.instance }}: {{ $value | printf \"%.2f\"}}%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
-        - alert: VaultClusterHealth
-          expr: sum(vault_core_active) / count(vault_core_active) <= 0.5
-          for: 0m
+        - alert: VaultClusterDegraded
+          # Fires when fewer than 3 pods are reporting the vault_core_active metric for 10 minutes.
+          # Note: vault_core_active is 1 on the leader and 0 on standbys — only 1 pod is ever
+          # "active" at a time. count() here counts how many pods are reporting the metric at all,
+          # regardless of its value. A count < 3 means one or more pods have stopped reporting
+          # (crashed, evicted, or not yet joined Raft).
+          # for: 10m avoids false positives during initial startup when pods join sequentially.
+          expr: count(vault_core_active) < 3
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Vault cluster degraded
+            description: "One or more Vault pods have stopped reporting metrics\n  REPORTING PODS = {{ $value }}"
+        - alert: VaultRaftNoLeader
+          # Fires when no Vault pod reports itself as the active (leader) node for 1 minute.
+          # This means the Raft cluster has lost quorum and Vault is completely unavailable for writes.
+          # Immediate action required — check pod status, Raft peer list, and KMS connectivity.
+          expr: sum(vault_core_active) == 0
+          for: 1m
           labels:
             severity: critical
           annotations:
-            summary: Vault cluster health (instance {{ $labels.instance }})
-            description: "Vault cluster is not healthy {{ $labels.instance }}: {{ $value | printf \"%.2f\"}}%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+            summary: Vault Raft has no leader
+            description: "No active Vault leader elected for over 1 minute\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        - alert: VaultRaftReplicationLag
+          # Fires when Raft appendEntries RTT p99 exceeds 2 seconds for 5 minutes on any standby.
+          # High replication lag means standbys are falling behind the leader — can be caused by
+          # network latency, slow EBS volumes, or the standby pod being CPU/memory starved.
+          expr: vault_raft_replication_appendEntries_rtt_ms{quantile="0.99"} > 2000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Vault Raft replication lag (instance {{ $labels.instance }})
+            description: "Raft replication RTT p99 > 2s on {{ $labels.instance }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        - alert: VaultRequestErrors
+          # Fires when more than 10 request errors are recorded in a 5 minute window on any instance.
+          # vault_core_handle_request_count{status="error"} is incremented for every request
+          # that Vault returns an error response for (4xx/5xx). A sustained spike indicates
+          # client misconfiguration, auth failures, or an overloaded/degraded Vault node.
+          expr: increase(vault_core_response_status_code{type=~"4xx|5xx"}[5m]) > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Vault request errors (instance {{ $labels.instance }})
+            description: "More than 10 request errors in 5m on {{ $labels.instance }}\n  VALUE = {{ $value | printf \"%.0f\" }}"

@@ -70,7 +70,7 @@ data "aws_iam_policy_document" "vault_aws_secret" {
   statement {
     sid       = "vaultPolicyDocumentVaultAWSSecret"
     effect    = "Allow"
-    resources = ["arn:aws:iam::${data.aws_caller_identity.current.id}:user/vault-*"]
+    resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/vault-*"]
 
     actions = [
       "iam:AttachUserPolicy",

@@ -1,7 +1,7 @@
 resource "helm_release" "vault_server" {
   name       = "vault-server-${random_pet.env.id}"
-  repository = "https://helm.releases.hashicorp.com  "
-  chart      = "hashicorp/vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
   namespace  = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
   version    = var.vault_helm_chart_version
   wait       = true #Waiting for all Vault Pods to be Ready state before marking TF success
@@ -20,6 +20,7 @@ resource "helm_release" "vault_server" {
       ingress_enable                   = var.ingress_enable
       ingress_lb_name                  = var.ingress_lb_name
       ingress_hosted_zone              = var.ingress_hosted_zone
+      certificate_arn                  = var.ingress_enable ? module.acm_ingress[0].certificate_arn : ""
       enable_prometheus_servicemonitor = var.enable_prometheus_servicemonitor
       k8s_cluster_name                 = var.k8s_cluster_name
       sa_name                          = var.sa_name

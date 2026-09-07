@@ -6,6 +6,6 @@ resource "kubernetes_config_map" "vault_init_config" {
   }
 
   data = {
-    "run.sh" = "${file("${path.module}/run.sh")}"
+    "run.sh" = file("${path.module}/run.sh")
   }
 }
