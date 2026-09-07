@@ -1,7 +1,8 @@
 # Service acccount that would be used by consume pod to authenticate via AWS auth to Vault
 resource "kubernetes_service_account" "consume_sa" {
   metadata {
-    name = var.consume_pod_sa_name
+    name      = var.consume_pod_sa_name
+    namespace = var.consume_pod_namespace
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.consume_pod_role.arn
     }
@@ -43,7 +44,8 @@ resource "aws_iam_role" "consume_pod_role" {
 # Consume pod that would login to Vault server via AWS auth and IRSA
 resource "kubernetes_pod" "consume_pod" {
   metadata {
-    name = "consume-pod"
+    name      = "consume-pod"
+    namespace = var.consume_pod_namespace
   }
   spec {
     service_account_name = var.consume_pod_sa_name # The SA has the same name as the AWS role, which would allow omitting of `role=` when login - vault login -method=aws

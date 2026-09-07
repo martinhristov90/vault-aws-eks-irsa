@@ -29,12 +29,12 @@ variable "consume_pod_sa_name" {
 }
 
 variable "vault_helm_chart_version" {
-  default     = "0.28.0"
+  default     = "0.34.1"
   description = "Version of the Vault helm chart to be used"
 }
 
 variable "vault_version" {
-  default     = "1.18.2"
+  default     = "2.0.4"
   description = "Version of Vault used by the Helm chart"
 
   validation {
