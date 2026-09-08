@@ -115,11 +115,11 @@ server:
     # This just does an init of TF, so the TF inside the main container can configure Vault
   - name: terraform-vault-provision-initialization
     image: hashicorp/terraform:1.7.4
-    #command: ["/bin/sh"]
+    command: ["/bin/sh", "-c"]
     args:
-      - -chdir=/vault/tf-provision
-      - init
-      - -input=false
+      - |
+        terraform -chdir=/vault/tf-provision init -input=false \
+          -backend-config="namespace=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
     securityContext:
       runAsUser: 65534
       allowPrivilegeEscalation: false
