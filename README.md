@@ -206,9 +206,32 @@ base64 -d <<< $(kubectl get secret vault-root-creds -n vault -o json | jq -r .da
         ```
 - Further configurations can be made to the Vault server utilizing the `root` token or subsequently issued child tokens.
 -----
+### Terraform state persistence across Pod `*-0` restarts
+
+TF state is stored as a K8S Secret using the [Terraform Kubernetes backend](https://developer.hashicorp.com/terraform/language/settings/backends/kubernetes), surviving pod restarts. The namespace is injected dynamically at init time from the pod's service account so the config is not hardcoded.
+
+- **`k8s_tf_role.tf`** — dedicated `role_tf_state` Role + RoleBinding scoped to `tfstate-default-tf-provision-state` (secret) and `lock-tfstate-default-tf-provision-state` (lease). `create`/`list` are namespace-wide due to a K8S RBAC limitation.
+- **`values_vault.yaml`** — init container passes `-backend-config="namespace=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"` to `terraform init`.
+- **`run.sh`** — on Pod `*-0` restarts, the recovery key is restored from `vault-root-creds` to `~/.vault-recovery-key` before `terraform apply`.
+
+#### Required change in `git_repository`
+
+Add to `terraform.tf` in the [`git_repository`](https://github.com/martinhristov90/terraform-aws-k8s-vault-setup):
+
+```hcl
+terraform {
+  backend "kubernetes" {
+    secret_suffix     = "tf-provision-state"
+    in_cluster_config = true
+  }
+}
+```
+
+-----
 ### TODO:
   - [x] Configure optional Ingress resource + cert
   - [x] Add ServiceMonitor resource for Prometheus operator
   - [x] Deploy ServiceMonitor via Vault's Helm chart
+  - [x] Persist Terraform state across Pod `*-0` restarts using the Kubernetes backend
 ### License:
   - [MIT](https://choosealicense.com/licenses/mit/)
