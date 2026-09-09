@@ -9,7 +9,7 @@
   In addition to above-mentioned setup, a consuming Pod named `consume-pod` is created, which can authenticate to the Vault server effortlessly simply via `vault login -method=aws` command.
 
 ### Simple diagram:
-![Diagram](https://lucid.app/publicSegments/view/ebb116c7-90e4-4920-a344-ff3d584e8d1d/image.png)
+![Diagram](./diagrams/main_diagram.png)
 
 ### Prerequisites:
   - Having AWS account
