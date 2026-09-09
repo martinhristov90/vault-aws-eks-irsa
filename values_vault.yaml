@@ -102,6 +102,7 @@ server:
     args:
       - clone
       - --single-branch
+      - --depth=1
       - --
       - ${git_repository}
       - /vault/tf-provision
@@ -265,7 +266,7 @@ server:
       # Enables Raft integrated storage
       enabled: true
       # Set the Node Raft ID to the name of the pod
-      setNodeId: false
+      setNodeId: true
 
       # Note: Configuration files are stored in ConfigMaps so sensitive data
       # such as passwords should be either mounted through extraSecretEnvironmentVars
