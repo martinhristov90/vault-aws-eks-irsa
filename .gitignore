@@ -10,3 +10,5 @@ crash.log
 .terraform
 .terraform.*
 default_values.yaml
+diagrams/main_diagram_dark.png
+vault-k8s-presentation.pptx

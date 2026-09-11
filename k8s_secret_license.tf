@@ -1,7 +1,7 @@
-resource "kubernetes_secret" "vault-ent-license" {
+resource "kubernetes_secret_v1" "vault-ent-license" {
   metadata {
     name      = "vault-ent-license"
-    namespace = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
+    namespace = kubernetes_namespace_v1.k8s-sa-namespace.metadata[0].name
   }
 
   data = {

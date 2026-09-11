@@ -1,5 +1,5 @@
 # Service acccount that would be used by consume pod to authenticate via AWS auth to Vault
-resource "kubernetes_service_account" "consume_sa" {
+resource "kubernetes_service_account_v1" "consume_sa" {
   metadata {
     name      = var.consume_pod_sa_name
     namespace = var.consume_pod_namespace
@@ -42,7 +42,7 @@ resource "aws_iam_role" "consume_pod_role" {
 }
 
 # Consume pod that would login to Vault server via AWS auth and IRSA
-resource "kubernetes_pod" "consume_pod" {
+resource "kubernetes_pod_v1" "consume_pod" {
   metadata {
     name      = "consume-pod"
     namespace = var.consume_pod_namespace
@@ -62,7 +62,7 @@ resource "kubernetes_pod" "consume_pod" {
     }
 
   }
-  depends_on = [kubernetes_service_account.consume_sa]
+  depends_on = [kubernetes_service_account_v1.consume_sa]
   # Ignoring changes for env variables such as "AWS_ROLE_ARN" which are automaticall injected by K8S
   lifecycle {
     ignore_changes = [spec[0].container[0].env, spec[0].container[0].volume_mount, spec[0].volume]
