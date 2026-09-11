@@ -1,8 +1,8 @@
 #K8S role to create K8S secret used for storing root token and recovery keys
-resource "kubernetes_role" "role_root_token_unseal_key" {
+resource "kubernetes_role_v1" "role_root_token_unseal_key" {
   metadata {
     name      = "update-k8s-secrets-vault-${random_pet.env.id}"
-    namespace = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
+    namespace = kubernetes_namespace_v1.k8s-sa-namespace.metadata[0].name
     labels = {
       test = "vault-${random_pet.env.id}"
     }
@@ -17,15 +17,15 @@ resource "kubernetes_role" "role_root_token_unseal_key" {
 }
 
 #Rolebinding for the role above
-resource "kubernetes_role_binding" "role_root_token_unseal_key_role_binding" {
+resource "kubernetes_role_binding_v1" "role_root_token_unseal_key_role_binding" {
   metadata {
     name      = "vault-server-k8s-secrets-rolebinding"
-    namespace = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
+    namespace = kubernetes_namespace_v1.k8s-sa-namespace.metadata[0].name
   }
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "Role"
-    name      = kubernetes_role.role_root_token_unseal_key.metadata[0].name
+    name      = kubernetes_role_v1.role_root_token_unseal_key.metadata[0].name
   }
   subject {
     kind      = "ServiceAccount"
@@ -37,10 +37,10 @@ resource "kubernetes_role_binding" "role_root_token_unseal_key_role_binding" {
 # Role scoped to the Terraform kubernetes backend tfstate secret only.
 # Name follows the backend's fixed convention: tfstate-<workspace>-<secret_suffix>
 # where workspace=default and secret_suffix=tf-provision-state.
-resource "kubernetes_role" "role_tf_state" {
+resource "kubernetes_role_v1" "role_tf_state" {
   metadata {
     name      = "vault-tf-state-access-${random_pet.env.id}"
-    namespace = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
+    namespace = kubernetes_namespace_v1.k8s-sa-namespace.metadata[0].name
     labels = {
       test = "vault-${random_pet.env.id}"
     }
@@ -79,15 +79,15 @@ resource "kubernetes_role" "role_tf_state" {
 }
 
 # RoleBinding for tfstate secret access
-resource "kubernetes_role_binding" "role_tf_state_role_binding" {
+resource "kubernetes_role_binding_v1" "role_tf_state_role_binding" {
   metadata {
     name      = "vault-tf-state-rolebinding"
-    namespace = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
+    namespace = kubernetes_namespace_v1.k8s-sa-namespace.metadata[0].name
   }
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "Role"
-    name      = kubernetes_role.role_tf_state.metadata[0].name
+    name      = kubernetes_role_v1.role_tf_state.metadata[0].name
   }
   subject {
     kind      = "ServiceAccount"

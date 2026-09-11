@@ -1,8 +1,8 @@
 #K8S Configmap which contains bash script for provisioning Vault via TF
-resource "kubernetes_config_map" "vault_init_config" {
+resource "kubernetes_config_map_v1" "vault_init_config" {
   metadata {
     name      = "vault-init-config"
-    namespace = kubernetes_namespace.k8s-sa-namespace.metadata[0].name
+    namespace = kubernetes_namespace_v1.k8s-sa-namespace.metadata[0].name
   }
 
   data = {
