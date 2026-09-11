@@ -14,7 +14,7 @@
 ### Prerequisites:
   - Having AWS account
   - Pre-configured AWS EKS cluster with associated OIDC provider. Instructions on how to setup EKS cluster and OIDC provider for it can be found [here](https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html) and [here](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) 
-  - Terraform >= 1.8.2, < 1.9.0 (constraint: `~> 1.8.2`)
+  - Terraform >= 1.16.2, < 1.17.0 (constraint: `~>1.16.2`)
   - A Terraform Github repository which resembles [this](https://github.com/martinhristov90/terraform-aws-k8s-vault-setup), containing Vault TF provider resources to be deployed on the Vault server. The mentioned repository can be used as boilerplate.
 
 ### Usage:
