@@ -1,4 +1,5 @@
-.terraform
+.terraform/
+.terraform.*
 license_vault*
 ca.pem*
 NOTES*
@@ -7,8 +8,13 @@ LOGS*
 !/**/.gitkeep
 trash/
 crash.log
-.terraform
-.terraform.*
 default_values.yaml
 diagrams/main_diagram_dark.png
 vault-k8s-presentation.pptx
+
+# Local Terraform state — never commit; use a remote backend for shared environments
+terraform.tfstate
+terraform.tfstate.backup
+
+# Local variable overrides — copy terraform.tfvars.example → terraform.tfvars and fill in real values
+terraform.tfvars
