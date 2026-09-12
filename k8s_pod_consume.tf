@@ -57,13 +57,34 @@ resource "kubernetes_pod_v1" "consume_pod" {
       args              = ["infinity"]
       env {
         name  = "VAULT_ADDR"
-        value = "http://vault-server-${random_pet.env.id}.${var.sa_namespace}:8200" #Name of Helm release
+        value = "https://vault-server-${random_pet.env.id}.${var.sa_namespace}:8200" #Name of Helm release
+      }
+      env {
+        name  = "VAULT_CACERT"
+        value = "/vault/tls/ca.crt"
+      }
+      volume_mount {
+        name       = "vault-ca-cert"
+        mount_path = "/vault/tls"
+        read_only  = true
       }
     }
+    volume {
+      name = "vault-ca-cert"
+      secret {
+        # Name of the secret which contains the CA
+        secret_name = "vault-ca-cert"
 
+        # Getting only the CA cert, not the Vault's TLS certs and keys
+        items {
+          key  = "ca.crt"
+          path = "ca.crt"
+        }
+      }
+    }
   }
-  depends_on = [kubernetes_service_account_v1.consume_sa]
-  # Ignoring changes for env variables such as "AWS_ROLE_ARN" which are automaticall injected by K8S
+  depends_on = [kubernetes_service_account_v1.consume_sa, kubernetes_secret_v1.vault_ca_default]
+  # Ignoring changes for env variables such as "AWS_ROLE_ARN" which are automatically injected by K8S
   lifecycle {
     ignore_changes = [spec[0].container[0].env, spec[0].container[0].volume_mount, spec[0].volume]
   }

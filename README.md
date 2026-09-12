@@ -233,5 +233,6 @@ terraform {
   - [x] Add ServiceMonitor resource for Prometheus operator
   - [x] Deploy ServiceMonitor via Vault's Helm chart
   - [x] Persist Terraform state across Pod `*-0` restarts using the Kubernetes backend
+  - [x] Implement internal TLS, so the communication is encrypted between ALB and Vault pods, as well as Pods within the cluster
 ### License:
   - [MIT](https://choosealicense.com/licenses/mit/)

@@ -2,10 +2,13 @@ global:
   # enabled is the master enabled switch. Setting this to true or false
   # will enable or disable all the components within this chart by default.
   enabled: true
+  tlsDisable: false
 injector:
   # True if you want to enable vault agent injection.
   # @default: global.enabled
   enabled: "false"
+# TLS for end-to-end encrypted transport
+
 
 server:
   
@@ -16,11 +19,12 @@ server:
       # traffic: external
     annotations:
       alb.ingress.kubernetes.io/target-type: "ip"
+      alb.ingress.kubernetes.io/backend-protocol: "HTTPS"
       alb.ingress.kubernetes.io/load-balancer-name: "${ingress_lb_name}"
       alb.ingress.kubernetes.io/tags: "k8s_cluster=${k8s_cluster_name}"
       alb.ingress.kubernetes.io/scheme: "internet-facing"
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
-      alb.ingress.kubernetes.io/healthcheck-protocol: "HTTP"
+      alb.ingress.kubernetes.io/healthcheck-protocol: "HTTPS"
       alb.ingress.kubernetes.io/healthcheck-port: "8200"
       alb.ingress.kubernetes.io/success-codes: 200,429,473
       alb.ingress.kubernetes.io/healthcheck-path: "/v1/sys/health"
@@ -162,6 +166,7 @@ server:
   # used to include variables required for auto-unseal.
   extraEnvironmentVars:
     #Defining variables used to provision Vault by TF
+    VAULT_CACERT: "/vault/tls/vault-server-tls/ca.crt"
     TF_VAR_DEMOROLE_POLICY_ARN: ${TF_VAR_DEMOROLE_POLICY_ARN}
     TF_VAR_DEMOROLE_ROLE_ARN: ${TF_VAR_DEMOROLE_ROLE_ARN}
     TF_VAR_ROLE_NAME: ${TF_VAR_ROLE_NAME}
@@ -180,6 +185,10 @@ server:
     #Volume used as /tmp for Terraform container, so it can download providers
     - name: tmp
       emptyDir: {}
+    #Volume providing TLS cert used internally within the K8S cluster.
+    - name: vault-server-tls
+      secret:
+        secretName: vault-server-tls
   # volumeMounts is a list of volumeMounts for the main server container. These are rendered
   # via toYaml rather than pre-processed like the extraVolumes value.
   # The purpose is to make it easy to share volumes between containers.
@@ -188,7 +197,9 @@ server:
       name: vault-init-config
     - name: tf-provision
       mountPath: /vault/tf-provision
-        
+    - name: vault-server-tls
+      mountPath: /vault/tls/vault-server-tls
+      readOnly: true
   # Affinity Settings
   # Commenting out or setting as empty the affinity variable, will allow
   # deployment to single node services such as Minikube
@@ -276,7 +287,11 @@ server:
         ui = true
         raw_storage_endpoint = true
         listener "tcp" {
-          tls_disable = 1
+          tls_disable = "false"
+          tls_cert_file      = "/vault/tls/vault-server-tls/tls.crt"
+          tls_key_file       = "/vault/tls/vault-server-tls/tls.key"
+          tls_client_ca_file = "/vault/tls/vault-server-tls/ca.crt"
+
           address = "[::]:8200"
           cluster_address = "[::]:8201"
           # Enable unauthenticated metrics access (necessary for Prometheus Operator)
@@ -295,7 +310,11 @@ server:
       
           retry_join {
             auto_join = "provider=k8s namespace=\"{{ .Release.Namespace }}\" label_selector=\"component=server, app.kubernetes.io/name=vault\""
-              auto_join_scheme      = "http"
+              auto_join_scheme      = "https"
+              leader_tls_servername = "vault-server-${random_pet_id}"
+              leader_ca_cert_file = "/vault/tls/vault-server-tls/ca.crt"
+              leader_client_cert_file = "/vault/tls/vault-server-tls/tls.crt"
+              leader_client_key_file = "/vault/tls/vault-server-tls/tls.key"
           }
         }
         service_registration "kubernetes" {}
