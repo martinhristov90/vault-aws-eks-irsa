@@ -382,7 +382,12 @@ serverTelemetry:
     #     secret:
     #       name: vault-metrics-client
     #       key: ca.crt
-    tlsConfig: {}
+    # This secret is created by internal-tls.tf, we are only interested in the CA, not TLS certs and keys
+    tlsConfig: 
+      ca:
+        secret:
+          name: vault-server-tls
+          key: ca.crt
 
     # authorization used for scraping the Vault metrics API.
     # See API reference: https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.SafeAuthorization

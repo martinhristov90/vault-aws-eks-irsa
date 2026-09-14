@@ -17,7 +17,6 @@ resource "helm_release" "vault_server" {
       TF_VAR_BOUND_VPC_IDS             = var.BOUND_VPC_IDS
       vault_version_and_type           = local.vault_version_and_type
       vault_repository                 = local.vault_repository
-      vault_self_signed_ca             = tls_self_signed_cert.ca_cert.cert_pem
       random_pet_id                    = random_pet.env.id # Used for leader_tls_servername in auto_join
       ingress_enable                   = var.ingress_enable
       ingress_lb_name                  = var.ingress_lb_name
