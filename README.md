@@ -41,6 +41,7 @@
   |vault_helm_chart_version|0.34.1|Version of the official Vault Helm chart to be used|
   |vault_version|2.0.4|Version of Vault to be installed|
   |enable_prometheus_servicemonitor|true|Enables deployment of ServiceMonitor resource when the Prometheus operator is installed in the K8S cluster|
+  |enable_vault_benchmark|false|Enables the Vault benchmark suite. When `true`, deploys a dedicated `ClusterIP` service pointing at the Vault StatefulSet and a `kubernetes_job` running `hashicorp/vault-benchmark:latest`. The benchmark configuration is managed in `vault_benchmark/main.tf`.|
   |ingress_enable|false|Enables deployment Ingress resource via Vault's Helm chart, this usually results in creation of ALB in AWS|
   |ingress_hosted_zone|mhristov.sbx.hashidemos.io|Hosted zone for issuing publicly trusted TLS certificate used by the Ingress resource|
   |ingress_lb_name|marti-test-alb-vault-k8s|Name of the ALB created in AWS|
@@ -62,6 +63,7 @@
   vault_version                    = "2.0.4"
   vault_type                       = "ent"
   enable_prometheus_servicemonitor = true
+  enable_vault_benchmark           = false
   ingress_enable                   = false
   ingress_hosted_zone              = "mhristov.sbx.hashidemos.io"
   ingress_lb_name                  = "marti-test-alb-vault-k8s"

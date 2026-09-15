@@ -57,7 +57,11 @@ resource "tls_cert_request" "vault_csr" {
 
     "*.${var.sa_namespace}",
     "*.${var.sa_namespace}.svc",
-    "*.${var.sa_namespace}.svc.cluster.local"
+    "*.${var.sa_namespace}.svc.cluster.local",
+
+    "vault-benchmark-service",
+    "vault-benchmark-service.${var.sa_namespace}",
+    "vault-benchmark-service.${var.sa_namespace}.svc.cluster.local"
   ]
 
   ip_addresses = [
