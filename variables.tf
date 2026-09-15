@@ -57,6 +57,12 @@ variable "enable_prometheus_servicemonitor" {
   type    = bool
   default = true
 }
+
+variable "enable_vault_benchmark" {
+  type        = bool
+  default     = false
+  description = "Deploy the Vault benchmark job (hashicorp/vault-benchmark) as a K8S Job in the Vault namespace. Requires the Vault server to be running and the vault-root-creds secret to be present."
+}
 # Variables for Ingress resource and ACM certificate
 variable "ingress_enable" {
   type    = bool
