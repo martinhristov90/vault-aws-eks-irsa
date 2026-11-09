@@ -1,7 +1,7 @@
 # Service acccount that would be used by consume pod to authenticate via AWS auth to Vault
 resource "kubernetes_service_account_v1" "consume_sa" {
   metadata {
-    name      = var.consume_pod_sa_name
+    name      = "consume-sa-${random_pet.env.id}"
     namespace = var.consume_pod_namespace
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.consume_pod_role.arn
@@ -24,7 +24,7 @@ data "aws_iam_policy_document" "assume_role_consume_pod" {
     condition {
       test     = "StringEquals"
       variable = "${local.issuer_hostpath}:sub"
-      values   = ["system:serviceaccount:${var.consume_pod_namespace}:${var.consume_pod_sa_name}"]
+      values   = ["system:serviceaccount:${var.consume_pod_namespace}:consume-sa-${random_pet.env.id}"]
     }
   }
 }
@@ -44,11 +44,11 @@ resource "aws_iam_role" "consume_pod_role" {
 # Consume pod that would login to Vault server via AWS auth and IRSA
 resource "kubernetes_pod_v1" "consume_pod" {
   metadata {
-    name      = "consume-pod"
+    name      = "consume-pod-${random_pet.env.id}"
     namespace = var.consume_pod_namespace
   }
   spec {
-    service_account_name = var.consume_pod_sa_name # The SA has the same name as the AWS role, which would allow omitting of `role=` when login - vault login -method=aws
+    service_account_name = kubernetes_service_account_v1.consume_sa.metadata[0].name
     container {
       image             = "${local.vault_repository}:${local.vault_version_and_type}" # kept in sync with the Helm chart image via locals
       name              = "vault-client"
@@ -73,7 +73,7 @@ resource "kubernetes_pod_v1" "consume_pod" {
       name = "vault-ca-cert"
       secret {
         # Name of the secret which contains the CA
-        secret_name = "vault-ca-cert"
+        secret_name = kubernetes_secret_v1.vault_ca_default.metadata[0].name
 
         # Getting only the CA cert, not the Vault's TLS certs and keys
         items {

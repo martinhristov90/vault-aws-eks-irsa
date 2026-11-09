@@ -51,7 +51,7 @@ fetch_root_creds() {
         --header="Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
         --no-check-certificate \
         --output-document - --quiet \
-        https://kubernetes.default:443/api/v1/namespaces/$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/secrets/vault-root-creds 2>/dev/null) \
+        https://kubernetes.default:443/api/v1/namespaces/${VAULT_K8S_NAMESPACE}/secrets/vault-root-creds 2>/dev/null) \
       && VAULT_TOKEN=$(echo "$K8S_SECRET_RESPONSE" | grep -o '"root_token": *"[^"]*"' | cut -d'"' -f4 | base64 -d) \
       && [ -n "$VAULT_TOKEN" ]; do
     echo "Secret vault-root-creds not ready yet, retrying..." > /proc/1/fd/1
@@ -90,10 +90,13 @@ case "$VAULT_K8S_POD_NAME" in
         # Write recovery key to ~/.vault-recovery-key for safekeeping on this pod
         cat /tmp/root.keys | grep "Recovery Key 1" | cut -d " " -f4 > ~/.vault-recovery-key
 
+        # Ensure the provisioned TF configuration targets the current pod namespace
+        sed -i "s|namespace = \"vault\"|namespace = \"${VAULT_K8S_NAMESPACE}\"|g" /vault/tf-provision/main.tf 2>/dev/null || true
+
         # Import the vault-root-creds K8S secret (created empty by TF) into TF state
         # so that apply can populate it with the root token and recovery key.
         # This must only run once — on subsequent restarts the resource is already in state.
-        terraform -chdir=/vault/tf-provision import kubernetes_secret.vault_root_creds vault/vault-root-creds > /proc/1/fd/1
+        terraform -chdir=/vault/tf-provision import kubernetes_secret.vault_root_creds "${VAULT_K8S_NAMESPACE}/vault-root-creds" > /proc/1/fd/1
         terraform -chdir=/vault/tf-provision apply -input=false -no-color --auto-approve > /proc/1/fd/1
     else
         # -----------------------------------------------------------------
@@ -114,6 +117,10 @@ case "$VAULT_K8S_POD_NAME" in
         # On the restart path (else branch), export PATH here so terraform apply below
         # can find the binary. On first boot PATH was already exported inside the if block.
         export PATH=$PATH:/home/vault
+
+        # Ensure the provisioned TF configuration targets the current pod namespace
+        sed -i "s|namespace = \"vault\"|namespace = \"${VAULT_K8S_NAMESPACE}\"|g" /vault/tf-provision/main.tf 2>/dev/null || true
+
         # -------------------------------------------------------------------------
         # Always run terraform apply on Pod *-0, both on first boot and on restarts.
         # Apply is idempotent — safe to run repeatedly. On restarts this picks up

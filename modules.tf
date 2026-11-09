@@ -3,7 +3,8 @@ module "acm_ingress" {
   count               = var.ingress_enable ? 1 : 0
   source              = "./modules/acm_ingress"
   ingress_hosted_zone = var.ingress_hosted_zone
-  ingress_lb_name     = var.ingress_lb_name
+  ingress_lb_name     = local.ingress_lb_name
+  ingress_hostname    = local.ingress_hostname
 }
 
 # Module that deploys the Vault benchmark service and job

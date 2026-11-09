@@ -102,8 +102,8 @@ resource "kubernetes_secret_v1" "vault_tls" {
 # Creates a secret only with the CA to be consumed by customers of Vault, mainly consume-pod
 resource "kubernetes_secret_v1" "vault_ca_default" {
   metadata {
-    name      = "vault-ca-cert"
-    namespace = "default" # CA secret will be located in the default namespace to be consumed by customers of Vault
+    name      = "vault-ca-cert-${random_pet.env.id}"
+    namespace = var.consume_pod_namespace
   }
 
   type = "Opaque"

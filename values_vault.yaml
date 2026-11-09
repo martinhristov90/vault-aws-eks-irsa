@@ -28,7 +28,7 @@ server:
       alb.ingress.kubernetes.io/healthcheck-port: "8200"
       alb.ingress.kubernetes.io/success-codes: 200,429,473
       alb.ingress.kubernetes.io/healthcheck-path: "/v1/sys/health"
-      external-dns.alpha.kubernetes.io/hostname: vault.${ingress_hosted_zone}
+      external-dns.alpha.kubernetes.io/hostname: ${ingress_hostname}
       alb.ingress.kubernetes.io/certificate-arn: "${certificate_arn}"
       # |
       # kubernetes.io/ingress.class: nginx
@@ -49,7 +49,7 @@ server:
     # configure the ingress to point to the Vault active service.
     activeService: false
     hosts:
-      - host: vault.${ingress_hosted_zone}
+      - host: ${ingress_hostname}
         paths: []
     ## Extra paths to prepend to the host configuration. This is useful when working with annotation based services.
     extraPaths: []
