@@ -1,4 +1,4 @@
-#Creating a service with predictable name (the name of services depends of the name of the Helm release) to be used for Vault benchmark tool
+# Creating a service with predictable name (the name of services depends on the name of the Helm release) to be used for Vault benchmark tool
 resource "kubernetes_service_v1" "vault_benchmark" {
   metadata {
     name      = local.vault_service_name
