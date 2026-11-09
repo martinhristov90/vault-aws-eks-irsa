@@ -6,7 +6,11 @@ resource "kubernetes_job_v1" "demo" {
   }
   spec {
     template {
-      metadata {}
+      metadata {
+        annotations = {
+          "checksum/config" = sha256(jsonencode(kubernetes_config_map_v1.vault-benchmark-config.data))
+        }
+      }
       spec {
         # Wait until Vault is unsealed and active before starting the benchmark.
         # Polls /v1/sys/health with perfstandbyok=true so both active and standby
@@ -87,4 +91,10 @@ resource "kubernetes_job_v1" "demo" {
   }
   wait_for_completion = false
   depends_on          = [kubernetes_config_map_v1.vault-benchmark-config]
+
+  lifecycle {
+    replace_triggered_by = [
+      kubernetes_config_map_v1.vault-benchmark-config
+    ]
+  }
 }
