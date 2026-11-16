@@ -8,4 +8,6 @@ locals {
   provider_arn           = format("arn:aws:iam::%s:oidc-provider/%s", data.aws_caller_identity.current.account_id, local.issuer_hostpath)
   vault_version_and_type = "${var.vault_version}${var.vault_type == "ent" ? "-ent" : ""}"
   vault_repository       = var.vault_type == "ent" ? "hashicorp/vault-enterprise" : "hashicorp/vault"
+  # Unique per deployment, so multiple instances can share the same cluster/namespace
+  consume_sa_name = "${var.consume_pod_sa_name}-${random_pet.env.id}"
 }

@@ -1,7 +1,11 @@
 # Service acccount that would be used by consume pod to authenticate via AWS auth to Vault
 resource "kubernetes_service_account_v1" "consume_sa" {
   metadata {
+<<<<<<< HEAD
     name      = "consume-sa-${random_pet.env.id}"
+=======
+    name      = local.consume_sa_name
+>>>>>>> 713fa13 (adding ability to deploy multiple instances of the setup to the same EKS cluster)
     namespace = var.consume_pod_namespace
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.consume_pod_role.arn
@@ -24,7 +28,7 @@ data "aws_iam_policy_document" "assume_role_consume_pod" {
     condition {
       test     = "StringEquals"
       variable = "${local.issuer_hostpath}:sub"
-      values   = ["system:serviceaccount:${var.consume_pod_namespace}:consume-sa-${random_pet.env.id}"]
+      values   = ["system:serviceaccount:${var.consume_pod_namespace}:${local.consume_sa_name}"]
     }
   }
 }
@@ -48,7 +52,7 @@ resource "kubernetes_pod_v1" "consume_pod" {
     namespace = var.consume_pod_namespace
   }
   spec {
-    service_account_name = kubernetes_service_account_v1.consume_sa.metadata[0].name
+    service_account_name = local.consume_sa_name
     container {
       image             = "${local.vault_repository}:${local.vault_version_and_type}" # kept in sync with the Helm chart image via locals
       name              = "vault-client"
