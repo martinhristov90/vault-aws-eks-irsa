@@ -45,23 +45,23 @@ resource "tls_cert_request" "vault_csr" {
 
 
     "vault-server-${random_pet.env.id}",
-    "vault-server-${random_pet.env.id}.${var.sa_namespace}",
-    "vault-server-${random_pet.env.id}.${var.sa_namespace}.svc",
-    "vault-server-${random_pet.env.id}.${var.sa_namespace}.svc.cluster.local",
+    "vault-server-${random_pet.env.id}.${var.vault_namespace}",
+    "vault-server-${random_pet.env.id}.${var.vault_namespace}.svc",
+    "vault-server-${random_pet.env.id}.${var.vault_namespace}.svc.cluster.local",
 
 
     "*.vault-server-${random_pet.env.id}-internal",
-    "*.vault-server-${random_pet.env.id}-internal.${var.sa_namespace}",
-    "*.vault-server-${random_pet.env.id}-internal.${var.sa_namespace}.svc.cluster.local",
+    "*.vault-server-${random_pet.env.id}-internal.${var.vault_namespace}",
+    "*.vault-server-${random_pet.env.id}-internal.${var.vault_namespace}.svc.cluster.local",
 
 
-    "*.${var.sa_namespace}",
-    "*.${var.sa_namespace}.svc",
-    "*.${var.sa_namespace}.svc.cluster.local",
+    "*.${var.vault_namespace}",
+    "*.${var.vault_namespace}.svc",
+    "*.${var.vault_namespace}.svc.cluster.local",
 
     "vault-benchmark-service",
-    "vault-benchmark-service.${var.sa_namespace}",
-    "vault-benchmark-service.${var.sa_namespace}.svc.cluster.local"
+    "vault-benchmark-service.${var.vault_namespace}",
+    "vault-benchmark-service.${var.vault_namespace}.svc.cluster.local"
   ]
 
   ip_addresses = [
@@ -87,7 +87,7 @@ resource "tls_locally_signed_cert" "vault_cert" {
 resource "kubernetes_secret_v1" "vault_tls" {
   metadata {
     name      = "vault-server-tls"
-    namespace = var.sa_namespace
+    namespace = var.vault_namespace
   }
 
   type = "kubernetes.io/tls"
@@ -102,8 +102,8 @@ resource "kubernetes_secret_v1" "vault_tls" {
 # Creates a secret only with the CA to be consumed by customers of Vault, mainly consume-pod
 resource "kubernetes_secret_v1" "vault_ca_default" {
   metadata {
-    name      = "vault-ca-cert"
-    namespace = "default" # CA secret will be located in the default namespace to be consumed by customers of Vault
+    name      = "vault-ca-cert-${random_pet.env.id}"
+    namespace = var.consume_pod_namespace # Secrets can only be mounted from the Pod's own namespace, so it must match the consume-pod namespace
   }
 
   type = "Opaque"

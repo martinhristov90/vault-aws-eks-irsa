@@ -13,7 +13,7 @@ data "aws_iam_policy_document" "assume_role_vault_server_eks" {
     condition {
       test     = "StringEquals"
       variable = "${local.issuer_hostpath}:sub"
-      values   = ["system:serviceaccount:${var.sa_namespace}:${var.sa_name}"]
+      values   = ["system:serviceaccount:${var.vault_namespace}:${var.sa_name}"]
     }
   }
 }

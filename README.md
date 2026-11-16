@@ -6,7 +6,7 @@
 
 ### What is it:
   This project utilizes already existing EKS AWS cluster to deploy the official Vault Helm chart, setting up AWS IRSA accounts (IAM roles for service accounts (IRSA)) for Vault AWS auth method, Vault AWS secrets engine and auto Seal/Unseal functionality. 
-  In addition to above-mentioned setup, a consuming Pod named `consume-pod` is created, which can authenticate to the Vault server effortlessly simply via `vault login -method=aws` command.
+  In addition to above-mentioned setup, a consuming Pod named `consume-pod-<random_pet>` is created, which can authenticate to the Vault server effortlessly simply via `vault login -method=aws` command.
 
 ### Simple diagram:
 ![Diagram](./diagrams/main_diagram.png)
@@ -26,9 +26,15 @@
   - Execute Terraform plan and apply: `terraform plan` and `terraform apply`.
   - Terraform logs will be printed at `stdout` of `0`th Pod of Vault's StatefulSet. To follow initialization progress:
     ```
-    kubectl logs -f -n <sa_namespace> -c vault <release-name>-0
+    kubectl logs -f -n <vault_namespace> -c vault <release-name>-0
     ```
-  - For establishing sessions with the Vault server and `consume-pod`, `kubectl exec...` command can be utilized or 3rd party tools, such as [k9s](https://github.com/derailed/k9s).
+  - For establishing sessions with the Vault server and `consume-pod-<random_pet>`, `kubectl exec...` command can be utilized or 3rd party tools, such as [k9s](https://github.com/derailed/k9s).
+
+### Deploying multiple instances on the same cluster:
+  Several independent instances of this setup can be deployed on the same EKS cluster. Resources that are named with the `random_pet` suffix (Helm release, IAM roles/policies, KMS key, Roles, consume Pod, consume ServiceAccount `<consume_pod_sa_name>-<random_pet>`, CA secret `vault-ca-cert-<random_pet>`) do not collide between instances. For every additional instance:
+  - Use a separate Terraform state, so each instance gets its own `random_pet`, for example a new workspace: `terraform workspace new <name>`, or a separate copy of the repository.
+  - Set a different `vault_namespace` (and `consume_pod_namespace`, if it is not shared) in `terraform.tfvars`, as the namespace, `vault-tls`, `vault-root-creds` and `vault-ent-license` secrets have fixed names.
+  - If `ingress_enable = true`, set a different `ingress_lb_name` and `ingress_hosted_zone`, as the ALB name and the `vault.<ingress_hosted_zone>` hostname must be unique.
 ### `terraform.tfvars` explanation and example:
 
   | Variable | Example | Meaning |
@@ -36,8 +42,9 @@
   |k8s_cluster_name| k8s-training-martin|Name of EKS AWS kubernetes cluster, already deployed in AWS|
   |aws_region|eu-central-1|AWS region where the EKS cluster is deployed|
   |sa_name|vault-server|Name of K8S SA used by the Vault server Pods|
-  |sa_namespace|vault|K8S namespace where the Vault server will be deployed — created by this Terraform configuration via `k8s_namespace.tf`|
+  |vault_namespace|vault|K8S namespace where the whole Vault instance is deployed (Helm release, TLS/license/root-creds secrets, RBAC) — created by this Terraform configuration via `k8s_namespace.tf`. Also used to derive the Ingress hostname and ALB name|
   |consume_pod_namespace|default|K8S namespace where the consume Pod should be deployed, usually default|
+  |consume_pod_sa_name|demo-sa|Prefix of the K8S SA used by the consume Pod, the final name is `<consume_pod_sa_name>-<random_pet>` (default is used when the variable is omitted)|
   |vault_helm_chart_version|0.34.1|Version of the official Vault Helm chart to be used|
   |vault_version|2.0.4|Version of Vault to be installed|
   |enable_prometheus_servicemonitor|true|Enables deployment of ServiceMonitor resource when the Prometheus operator is installed in the K8S cluster|
@@ -57,7 +64,7 @@
   k8s_cluster_name                 = "k8s-training-martin"
   aws_region                       = "eu-central-1"
   sa_name                          = "vault-server"
-  sa_namespace                     = "vault"
+  vault_namespace                  = "vault"
   consume_pod_namespace            = "default"
   vault_helm_chart_version         = "0.34.1"
   vault_version                    = "2.0.4"
@@ -77,7 +84,7 @@
 -----
 
 ### How to consume this environment (consume-pod side):
-- After setting up correctly the `terraform.tfvars` file and executing `terraform apply` command, in the EKS are deployed three Vault server Pods (part of StatefulSet) as well as consuming Pod for Vault secrets named `consume-pod`.
+- After setting up correctly the `terraform.tfvars` file and executing `terraform apply` command, in the EKS are deployed three Vault server Pods (part of StatefulSet) as well as consuming Pod for Vault secrets named `consume-pod-<random_pet>` (for example `consume-pod-joint-racer`).
 - To verify the running Vault pods - `kubectl get pods -l component=server -n vault`:
 ```
 kubectl get pods -l component=server -n vault
@@ -86,19 +93,19 @@ vault-server-joint-racer-0   1/1     Running   0          3h
 vault-server-joint-racer-1   1/1     Running   0          3h
 vault-server-joint-racer-2   1/1     Running   0          3h
 ```
-- To verify that the `consume-pod` is running - `kubectl get pods consume-pod -n default`:
+- To verify that the `consume-pod-<random_pet>` is running - `kubectl get pods consume-pod-joint-racer -n default`:
 ```
-kubectl get pods consume-pod -n default
-NAME          READY   STATUS    RESTARTS   AGE
-consume-pod   1/1     Running   0          3h2m
+kubectl get pods consume-pod-joint-racer -n default
+NAME                      READY   STATUS    RESTARTS   AGE
+consume-pod-joint-racer   1/1     Running   0          3h2m
 ```
-- Execute a session on `consume-pod` Pod:
+- Execute a session on `consume-pod-<random_pet>` Pod:
 ```
-kubectl exec -it consume-pod -- /bin/sh
+kubectl exec -it consume-pod-joint-racer -- /bin/sh
 ```
 - Login to Vault server via `vault login -method=aws` command without providing any additional parameters to the command (VAULT_ADDR is preset):
 ```
-kubectl exec -it consume-pod -- /bin/sh
+kubectl exec -it consume-pod-joint-racer -- /bin/sh
 / # vault login -method=aws
 Success! You are now authenticated. The token information displayed below
 is already stored in the token helper. You do NOT need to run "vault login"

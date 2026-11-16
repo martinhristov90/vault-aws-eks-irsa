@@ -1,6 +1,10 @@
+locals {
+  domain_name = var.ingress_hostname != "" ? var.ingress_hostname : "vault.${var.ingress_hosted_zone}"
+}
+
 resource "aws_acm_certificate" "mycert_acm" {
-  domain_name               = "vault.${var.ingress_hosted_zone}"
-  subject_alternative_names = ["*.vault.${var.ingress_hosted_zone}"]
+  domain_name               = local.domain_name
+  subject_alternative_names = ["*.${local.domain_name}"]
 
   validation_method = "DNS"
 

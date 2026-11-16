@@ -19,8 +19,8 @@ resource "helm_release" "vault_server" {
       vault_repository                 = local.vault_repository
       random_pet_id                    = random_pet.env.id # Used for leader_tls_servername in auto_join
       ingress_enable                   = var.ingress_enable
-      ingress_lb_name                  = var.ingress_lb_name
-      ingress_hosted_zone              = var.ingress_hosted_zone
+      ingress_lb_name                  = local.ingress_lb_name
+      ingress_hostname                 = local.ingress_hostname
       certificate_arn                  = var.ingress_enable ? module.acm_ingress[0].certificate_arn : ""
       enable_prometheus_servicemonitor = var.enable_prometheus_servicemonitor
       k8s_cluster_name                 = var.k8s_cluster_name
