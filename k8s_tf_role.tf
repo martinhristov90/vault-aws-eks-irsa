@@ -30,7 +30,7 @@ resource "kubernetes_role_binding_v1" "role_root_token_unseal_key_role_binding" 
   subject {
     kind      = "ServiceAccount"
     name      = var.sa_name
-    namespace = var.sa_namespace
+    namespace = var.vault_namespace
   }
 }
 
@@ -92,6 +92,6 @@ resource "kubernetes_role_binding_v1" "role_tf_state_role_binding" {
   subject {
     kind      = "ServiceAccount"
     name      = var.sa_name
-    namespace = var.sa_namespace
+    namespace = var.vault_namespace
   }
 }

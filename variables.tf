@@ -13,8 +13,8 @@ variable "sa_name" {
   default     = "vault-server"
 }
 
-variable "sa_namespace" {
-  description = "K8S namespace of the K8S SA"
+variable "vault_namespace" {
+  description = "K8S namespace where the Vault instance is deployed (Helm release, secrets, RBAC); it is created by this configuration"
   default     = "vault"
 }
 

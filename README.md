@@ -26,14 +26,14 @@
   - Execute Terraform plan and apply: `terraform plan` and `terraform apply`.
   - Terraform logs will be printed at `stdout` of `0`th Pod of Vault's StatefulSet. To follow initialization progress:
     ```
-    kubectl logs -f -n <sa_namespace> -c vault <release-name>-0
+    kubectl logs -f -n <vault_namespace> -c vault <release-name>-0
     ```
   - For establishing sessions with the Vault server and `consume-pod-<random_pet>`, `kubectl exec...` command can be utilized or 3rd party tools, such as [k9s](https://github.com/derailed/k9s).
 
 ### Deploying multiple instances on the same cluster:
   Several independent instances of this setup can be deployed on the same EKS cluster. Resources that are named with the `random_pet` suffix (Helm release, IAM roles/policies, KMS key, Roles, consume Pod, consume ServiceAccount `<consume_pod_sa_name>-<random_pet>`, CA secret `vault-ca-cert-<random_pet>`) do not collide between instances. For every additional instance:
   - Use a separate Terraform state, so each instance gets its own `random_pet`, for example a new workspace: `terraform workspace new <name>`, or a separate copy of the repository.
-  - Set a different `sa_namespace` (and `consume_pod_namespace`, if it is not shared) in `terraform.tfvars`, as the namespace, `vault-tls`, `vault-root-creds` and `vault-ent-license` secrets have fixed names.
+  - Set a different `vault_namespace` (and `consume_pod_namespace`, if it is not shared) in `terraform.tfvars`, as the namespace, `vault-tls`, `vault-root-creds` and `vault-ent-license` secrets have fixed names.
   - If `ingress_enable = true`, set a different `ingress_lb_name` and `ingress_hosted_zone`, as the ALB name and the `vault.<ingress_hosted_zone>` hostname must be unique.
 ### `terraform.tfvars` explanation and example:
 
@@ -42,7 +42,7 @@
   |k8s_cluster_name| k8s-training-martin|Name of EKS AWS kubernetes cluster, already deployed in AWS|
   |aws_region|eu-central-1|AWS region where the EKS cluster is deployed|
   |sa_name|vault-server|Name of K8S SA used by the Vault server Pods|
-  |sa_namespace|vault|K8S namespace where the Vault server will be deployed — created by this Terraform configuration via `k8s_namespace.tf`|
+  |vault_namespace|vault|K8S namespace where the whole Vault instance is deployed (Helm release, TLS/license/root-creds secrets, RBAC) — created by this Terraform configuration via `k8s_namespace.tf`. Also used to derive the Ingress hostname and ALB name|
   |consume_pod_namespace|default|K8S namespace where the consume Pod should be deployed, usually default|
   |consume_pod_sa_name|demo-sa|Prefix of the K8S SA used by the consume Pod, the final name is `<consume_pod_sa_name>-<random_pet>` (default is used when the variable is omitted)|
   |vault_helm_chart_version|0.34.1|Version of the official Vault Helm chart to be used|
@@ -64,7 +64,7 @@
   k8s_cluster_name                 = "k8s-training-martin"
   aws_region                       = "eu-central-1"
   sa_name                          = "vault-server"
-  sa_namespace                     = "vault"
+  vault_namespace                  = "vault"
   consume_pod_namespace            = "default"
   vault_helm_chart_version         = "0.34.1"
   vault_version                    = "2.0.4"

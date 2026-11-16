@@ -57,7 +57,7 @@ resource "kubernetes_pod_v1" "consume_pod" {
       args              = ["infinity"]
       env {
         name  = "VAULT_ADDR"
-        value = "https://vault-server-${random_pet.env.id}.${var.sa_namespace}:8200" #Name of Helm release
+        value = "https://vault-server-${random_pet.env.id}.${var.vault_namespace}:8200" #Name of Helm release
       }
       env {
         name  = "VAULT_CACERT"
