@@ -90,9 +90,6 @@ case "$VAULT_K8S_POD_NAME" in
         # Write recovery key to ~/.vault-recovery-key for safekeeping on this pod
         cat /tmp/root.keys | grep "Recovery Key 1" | cut -d " " -f4 > ~/.vault-recovery-key
 
-        # Ensure the provisioned TF configuration targets the current pod namespace
-        sed -i "s|namespace = \"vault\"|namespace = \"${VAULT_K8S_NAMESPACE}\"|g" /vault/tf-provision/main.tf 2>/dev/null || true
-
         # Import the vault-root-creds K8S secret (created empty by TF) into TF state
         # so that apply can populate it with the root token and recovery key.
         # This must only run once — on subsequent restarts the resource is already in state.
@@ -117,9 +114,6 @@ case "$VAULT_K8S_POD_NAME" in
         # On the restart path (else branch), export PATH here so terraform apply below
         # can find the binary. On first boot PATH was already exported inside the if block.
         export PATH=$PATH:/home/vault
-
-        # Ensure the provisioned TF configuration targets the current pod namespace
-        sed -i "s|namespace = \"vault\"|namespace = \"${VAULT_K8S_NAMESPACE}\"|g" /vault/tf-provision/main.tf 2>/dev/null || true
 
         # -------------------------------------------------------------------------
         # Always run terraform apply on Pod *-0, both on first boot and on restarts.
