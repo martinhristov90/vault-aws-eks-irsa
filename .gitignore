@@ -11,6 +11,8 @@ crash.log
 default_values.yaml
 diagrams/main_diagram_dark.png
 vault-k8s-presentation.pptx
+.bob/
+bin/
 
 # Local Terraform state — never commit; use a remote backend for shared environments
 terraform.tfstate

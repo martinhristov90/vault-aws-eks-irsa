@@ -149,6 +149,14 @@ arn                arn:aws:sts::12<SNIP>33:assumed-role/vault-assumed-role-crede
 secret_key         56+jZZLtC<SNIP>i/f1N
 security_token     IQoJb3J<SNIP>+wFU3ApNoTxVf6QmvfT6i6PGhwrTCQvL6xBjqeAdHYe1V/Sb8g+zbrw+KpKzmJuC+oLTfcZ+gTnZMaFR2mLDSN87swkxRNSH/EoB/6dB/srj0poG0XFNVX3ijjbxROIQicKzDUXgFnP46nniKKsDJJ1aUofR3onANOxSMDHlAZDNkSa5XLyMV+P9ECfl21PHRSrZjUrR+HFwBARzcTih1wPEfxk5M+UqQ8/RQXFlCqvD94H5ZjHnQZGFaR
 ```
+
+- Run the Go SDK consumer example on `consume-pod-<random_pet>` (demonstrating IRSA login, `LifetimeWatcher` token renewal, and KV secret retrieval):
+```bash
+# From the repository root or go_example directory:
+cd go_example && ./upload_and_run.sh
+```
+See [`go_example/README.md`](go_example/README.md) for full details.
+
 ### How to consume this environment (Vault server side):
 - The root token is cached in `~/.vault-token` on Pod `0` of the StatefulSet. Both the root token and the recovery key are persisted in the `vault-root-creds` Kubernetes secret in the target namespace and can be sourced from there.
 - Fetching root key and unseal keys from the K8S secret:
