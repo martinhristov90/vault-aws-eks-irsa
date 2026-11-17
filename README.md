@@ -14,88 +14,66 @@
 ### Simple diagram (Mermaid version):
 ```mermaid
 flowchart TB
-    %% External Provisioning
-    GH["GitHub Repository<br/>(Terraform Provisioning Config)"]
+    sts_svc["STS<br/>Identity Access Management AWS STS"]
+    helm["Kubernetes Helm"]
+    secret["secret"]
+    iam["AWS IAM"]
+    kms["AWS KMS"]
+    oidc["EKS OIDC provider"]
+    consume_role["AWS<br/>consume_pod_role"]
+    consume_perm["No permissions assigned,<br/>used for identity"]
+    vault_role["AWS<br/>vault_eks_server_role"]
+    vault_perm["Permissions to access KMS +<br/>AWS auth and AWS secrets<br/>engine permissions"]
 
-    %% AWS Cloud Services
-    subgraph AWS["AWS Cloud (IRSA & Integrations)"]
-        direction LR
-        OIDC["EKS OIDC Provider"]
-        STS["AWS STS"]
-        KMS["AWS KMS (Auto-Unseal)"]
-        IAM["AWS IAM (Secrets Engine)"]
-        V_ROLE["Vault Server IAM Role"]
-        C_ROLE["Consume Pod IAM Role"]
-    end
-
-    %% Vault K8s Namespace
-    subgraph VAULT_NS["Vault Kubernetes Namespace"]
+    subgraph default_ns[" "]
         direction TB
-        subgraph VAULT_PODS["Vault 3-Node HA Cluster"]
-            direction LR
-            V0["Vault Pod 0 (Leader)<br/>• Init & postStart run.sh<br/>• Terraform apply"]
-            VN["Vault Pods 1 & 2 (Standbys)<br/>• Raft Auto-Join (:8201)<br/>• Wait for root-creds"]
-            V0 <-->|"Raft mTLS"| VN
-        end
-
-        subgraph VAULT_STORAGE["Secrets & State"]
-            direction LR
-            V_TLS["vault-server-tls (TLS + CA)"]
-            V_ROOT["vault-root-creds (Root Token)"]
-            V_TF["TF K8S Backend State & Lock"]
-        end
-
-        SVC["Vault Services (Active / Standby / Internal :8200)"]
+        ns_default["ns<br/>Default K8S namespace"]
+        sdk["Vault client + AWS SDK"]
+        pod["pod<br/>Consume pod"]
+        sa["sa<br/>Annotated SA with IAM role"]
+        pod <--> sdk
+        pod --> sa
     end
 
-    %% Consumer Namespace
-    subgraph CONSUMER_NS["Consumer Kubernetes Namespace"]
-        direction LR
-        C_POD["Consume Pod (CLI / Go SDK Consumer)"]
-        C_SA["Consume SA (Annotated)"]
-        C_CA["vault-ca-cert (CA)"]
+    subgraph vault_ns[" "]
+        direction TB
+        ns_vault["ns<br/>Vault K8S namespace"]
+        cm["cm<br/>vault_init_config ConfigMap"]
+        github["TF provision<br/>terraform-aws-k8s-vault-setup"]
+        vsts["sts<br/>Vault StatefulSet"]
+        cm -->|"Github provision repository"| github
+        vsts --> cm
     end
 
-    %% Optional External Ingress
-    ALB["AWS ALB Ingress (ACM TLS Certificate)"]
+    %% Vault deployment
+    helm -->|"Vault official Helm Chart"| vault_ns
+    cm -->|"vault-root-creds K8S secret"| secret
 
-    %% Connections - Provisioning
-    GH -->|"1. Clone TF repo"| V0
-    V0 -->|"2. Save Token & Recovery Key"| V_ROOT
-    V0 -->|"3. Persist TF State"| V_TF
-    VN -.->|"Read Token"| V_ROOT
-    V_TLS -.->|"Internal TLS"| VAULT_PODS
+    %% Vault server AWS integration
+    vsts -->|"AWS secrets"| iam
+    vsts <-->|"auto seal/unseal"| kms
+    vsts --> vault_role
+    vault_role --> vault_perm
+    vsts <-->|"AWS IAM vault_eks_server_role"| oidc
 
-    %% Connections - AWS Integrations
-    V_ROLE -->|"Auto-Unseal"| KMS
-    V_ROLE -->|"Dynamic IAM Users / Roles"| IAM
-    VAULT_PODS -->|"IRSA Role Assume"| V_ROLE
-    V_ROLE -.->|"Trust"| OIDC
+    %% Consumer pod
+    pod --> consume_role
+    consume_role --> consume_perm
 
-    %% Connections - Consumer Auth & Access Flow
-    C_SA -.->|"IRSA"| C_ROLE
-    C_CA -.->|"Trust CA"| C_POD
-    C_POD -->|"1. STS GetCallerIdentity"| STS
-    C_POD -->|"2. vault login -method=aws"| SVC
-    SVC --> V0
-    V0 -->|"3. Validate Identity"| STS
-    V0 -->|"4. Issue Token / Fetch Secrets"| C_POD
+    %% STS flow
+    pod -->|"1.AssumeRoleWithWebIdentity"| oidc
+    oidc -->|"2.JWT presented from the pod"| sts_svc
+    sts_svc -->|"3.Returning temporary STS credentials"| pod
 
-    %% Ingress Flow
-    ALB -.->|"Optional External HTTPS"| SVC
+    classDef k8s fill:#326ce5,stroke:#fff,color:#fff;
+    classDef aws fill:#7aa116,stroke:#4d6b0c,color:#fff;
+    classDef sec fill:#dd2c2c,stroke:#900,color:#fff;
+    class ns_default,ns_vault,pod,sa,cm,vsts,secret,helm,sdk k8s;
+    class iam,kms,consume_role,vault_role aws;
+    class oidc,sts_svc,consume_perm,vault_perm,github sec;
 
-    %% Styling
-    classDef k8s fill:#326ce5,stroke:#1a4291,color:#fff;
-    classDef aws fill:#e07a1e,stroke:#a6530a,color:#fff;
-    classDef vault fill:#24292e,stroke:#000,color:#fff;
-    classDef sec fill:#0284c7,stroke:#0369a1,color:#fff;
-    classDef ext fill:#4b5563,stroke:#374151,color:#fff;
-
-    class OIDC,STS,KMS,IAM,V_ROLE,C_ROLE,ALB aws;
-    class V_TLS,V_ROOT,V_TF,C_SA,C_CA sec;
-    class V0,VN,C_POD vault;
-    class GH ext;
-    class SVC,VAULT_PODS,VAULT_STORAGE k8s;
+    style default_ns stroke:#2eb82e,stroke-dasharray: 5 5,fill:none
+    style vault_ns stroke:#e02020,stroke-dasharray: 5 5,fill:none
 ```
 
 ### Prerequisites:
