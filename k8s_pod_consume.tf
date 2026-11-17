@@ -63,6 +63,14 @@ resource "kubernetes_pod_v1" "consume_pod" {
         name  = "VAULT_CACERT"
         value = "/vault/tls/ca.crt"
       }
+      env {
+        name  = "AWS_REGION"
+        value = var.aws_region
+      }
+      env {
+        name  = "AWS_DEFAULT_REGION"
+        value = var.aws_region
+      }
       volume_mount {
         name       = "vault-ca-cert"
         mount_path = "/vault/tls"
