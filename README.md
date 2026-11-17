@@ -11,6 +11,135 @@
 ### Simple diagram:
 ![Diagram](./diagrams/main_diagram.png)
 
+### Simple diagram (Mermaid version):
+```mermaid
+flowchart TB
+    subgraph EXT["External Provisioning"]
+        GH["GitHub Repository<br/><code>git_repository</code><br/>(Terraform Vault Config)"]
+    end
+
+    subgraph AWS["AWS Cloud Infrastructure"]
+        subgraph AWS_IAM["AWS IAM & Security"]
+            OIDC["EKS OIDC Provider<br/><code>sts:AssumeRoleWithWebIdentity</code>"]
+            STS["AWS STS<br/><code>GetCallerIdentity / AssumeRole</code>"]
+            KMS["AWS KMS CMK<br/><code>awskms</code> Auto-Unseal & Recovery"]
+            IAM_SVC["AWS IAM Service<br/>Dynamic Users & Access Keys"]
+
+            subgraph IAM_ROLES["IAM Roles (IRSA)"]
+                V_ROLE["Vault Server IAM Role<br/><code>vault-eks-server-role</code><br/>• KMS Auto-Unseal<br/>• AWS Auth Validation<br/>• AWS Secrets Engine Mgmt"]
+                C_ROLE["Consume Pod IAM Role<br/><code>consume-pod-role</code><br/>• Identity for Vault AWS Auth"]
+            end
+        end
+
+        subgraph AWS_INGRESS["External Access (Optional)"]
+            ACM["AWS ACM<br/>Public TLS Certificate"]
+            ALB["AWS Application Load Balancer<br/>(AWS Load Balancer Controller)"]
+        end
+    end
+
+    subgraph K8S["EKS Kubernetes Cluster"]
+        subgraph V_NS["Vault Namespace"]
+            subgraph V_STS["Vault StatefulSet (3 HA Replicas)"]
+                direction TB
+                subgraph POD0["Vault Pod *-0 (Leader / Provisioner)"]
+                    direction TB
+                    INIT0["Init Containers:<br/>1. git-clone (GitHub repo)<br/>2. terraform init (K8S state backend)"]
+                    POST0["postStart Hook (run.sh):<br/>• vault operator init (KMS unseal)<br/>• Download TF binary<br/>• Write vault-root-creds Secret<br/>• terraform apply (AWS auth / secrets)"]
+                    V0["Vault Server 0<br/>(Active / Raft Leader)"]
+                    INIT0 --> POST0 --> V0
+                end
+
+                subgraph PODN["Vault Pods *-1 / *-2 (Standbys)"]
+                    direction TB
+                    INITN["Init Containers:<br/>1. git-clone<br/>2. terraform init"]
+                    POSTN["postStart Hook (run.sh):<br/>• Wait for vault-root-creds<br/>• Cache ~/.vault-token"]
+                    VN["Vault Server Standbys<br/>(Raft Followers)"]
+                    INITN --> POSTN --> VN
+                end
+
+                V0 <-->|"Raft Consensus & Auto-Join<br/>(Internal mTLS :8201)"| VN
+            end
+
+            subgraph V_STORAGE["K8S Secrets, Storage & State"]
+                V_TLS["Secret: <code>vault-server-tls</code><br/>(Server TLS Cert + Key + CA)"]
+                V_ROOT["Secret: <code>vault-root-creds</code><br/>(Root Token & Recovery Key)"]
+                V_LIC["Secret: <code>vault-ent-license</code><br/>(Enterprise License)"]
+                TF_STATE["Secret & Lease:<br/><code>tfstate-default-tf-provision-state</code><br/>(K8S Backend State Lock)"]
+                PVC["PersistentVolumeClaims<br/>(1Gi Raft Storage per Pod)"]
+            end
+
+            subgraph V_NET_OBS["Networking & Observability"]
+                SVC_INT["Headless Service:<br/><code>vault-internal</code> (:8200/:8201)"]
+                SVC_ACT["Service: <code>vault-active</code> / <code>vault-standby</code>"]
+                MON["Prometheus Operator<br/>• ServiceMonitor (/v1/sys/metrics)<br/>• PrometheusRule (Alerts)"]
+            end
+        end
+
+        subgraph C_NS["Consumer Namespace"]
+            subgraph C_POD["Consume Pod"]
+                direction TB
+                C_CLIENT["Vault Client / Go SDK Consumer<br/>• Injected AWS WebIdentity Token<br/>• LifetimeWatcher (Auto-Renew)<br/>• AuthManager (Auto-Relogin)"]
+            end
+            C_SA["ServiceAccount: <code>consume-sa</code><br/><code>eks.amazonaws.com/role-arn</code>"]
+            C_CA["Secret: <code>vault-ca-cert</code><br/>(Internal CA Cert)"]
+        end
+    end
+
+    %% Init & Provisioning Connections
+    GH -.->|"1. git clone TF code"| INIT0
+    GH -.->|"git clone TF code"| INITN
+    POST0 -->|"Persist State & Lock"| TF_STATE
+    POST0 -->|"Store Root Token & Recovery Key"| V_ROOT
+    POSTN -->|"Read Root Token"| V_ROOT
+    V_TLS -.->|"Internal TLS Certs"| V_STS
+    V_LIC -.->|"Enterprise License"| V_STS
+    PVC -.->|"Raft Data Mount (/vault/data)"| V_STS
+    C_CA -.->|"Mount CA Certificate"| C_CLIENT
+    C_SA -.->|"Annotated SA"| C_CLIENT
+
+    %% Ingress Connections
+    ACM -.->|"TLS Certificate"| ALB
+    ALB -->|"HTTPS :8200 (Internal TLS)"| SVC_ACT
+    SVC_ACT --> V0
+
+    %% Telemetry
+    V_TLS -.->|"CA Trust"| MON
+    MON -->|"Scrape Metrics (HTTPS :8200)"| SVC_INT
+    SVC_INT --> V_STS
+
+    %% AWS IRSA & Integrations
+    V_STS -->|"IRSA Token Exchange"| OIDC
+    OIDC -->|"AssumeRoleWithWebIdentity"| V_ROLE
+    V_ROLE -->|"KMS Auto-Unseal / Encrypt / Decrypt"| KMS
+    V_ROLE -->|"Verify IAM Caller Identity"| STS
+    V_ROLE -->|"Manage Dynamic IAM Users & Keys"| IAM_SVC
+
+    %% Consumer Auth Flow
+    C_CLIENT -->|"1. Projected WebIdentity Token"| OIDC
+    OIDC -->|"2. AssumeRole"| C_ROLE
+    C_ROLE -->|"3. Signed STS GetCallerIdentity Request"| STS
+    C_CLIENT -->|"4. vault login -method=aws (HTTPS :8200)"| SVC_ACT
+    V0 -->|"5. Validate STS Signature"| STS
+    V0 -->>|"6. Return Vault Token"| C_CLIENT
+    C_CLIENT -->|"7. Request AWS Secrets / KV Data"| V0
+
+    %% Styling
+    classDef k8s fill:#326ce5,stroke:#1a4291,color:#fff;
+    classDef aws fill:#e07a1e,stroke:#a6530a,color:#fff;
+    classDef vault fill:#24292e,stroke:#000,color:#fff;
+    classDef sec fill:#0284c7,stroke:#0369a1,color:#fff;
+    classDef ext fill:#4b5563,stroke:#374151,color:#fff;
+    classDef hook fill:#0d9488,stroke:#0f766e,color:#fff;
+    classDef mon fill:#6366f1,stroke:#4338ca,color:#fff;
+
+    class ALB,ACM,OIDC,STS,KMS,IAM_SVC,V_ROLE,C_ROLE,AWS_IAM,AWS_INGRESS,IAM_ROLES aws;
+    class V_TLS,V_ROOT,V_LIC,TF_STATE,PVC,C_CA,C_SA sec;
+    class V0,VN,C_CLIENT vault;
+    class INIT0,POST0,INITN,POSTN hook;
+    class SVC_INT,SVC_ACT,MON mon;
+    class GH ext;
+```
+
 ### Prerequisites:
   - Having AWS account
   - Pre-configured AWS EKS cluster with associated OIDC provider. Instructions on how to setup EKS cluster and OIDC provider for it can be found [here](https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html) and [here](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) 
