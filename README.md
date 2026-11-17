@@ -120,7 +120,7 @@ flowchart TB
     C_ROLE -->|"3. Signed STS GetCallerIdentity Request"| STS
     C_CLIENT -->|"4. vault login -method=aws (HTTPS :8200)"| SVC_ACT
     V0 -->|"5. Validate STS Signature"| STS
-    V0 -->>|"6. Return Vault Token"| C_CLIENT
+    V0 -->|"6. Return Vault Token"| C_CLIENT
     C_CLIENT -->|"7. Request AWS Secrets / KV Data"| V0
 
     %% Styling
