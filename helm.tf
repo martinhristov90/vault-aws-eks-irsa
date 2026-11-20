@@ -18,6 +18,7 @@ resource "helm_release" "vault_server" {
       vault_version_and_type           = local.vault_version_and_type
       vault_repository                 = local.vault_repository
       random_pet_id                    = random_pet.env.id # Used for leader_tls_servername in auto_join
+      vault_namespace                  = var.vault_namespace
       ingress_enable                   = var.ingress_enable
       ingress_lb_name                  = local.ingress_lb_name
       ingress_hostname                 = local.ingress_hostname

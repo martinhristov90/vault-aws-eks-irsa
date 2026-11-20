@@ -383,7 +383,8 @@ serverTelemetry:
     #       name: vault-metrics-client
     #       key: ca.crt
     # This secret is created by internal-tls.tf, we are only interested in the CA, not TLS certs and keys
-    tlsConfig: 
+    tlsConfig:
+      serverName: vault-server-${random_pet_id}.${vault_namespace}.svc
       ca:
         secret:
           name: vault-server-tls
